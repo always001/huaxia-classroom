@@ -1,0 +1,82 @@
+{
+  "id": "chunjie",
+  "title": "春节：爆竹声中辞旧岁",
+  "subtitle": "中国最盛大的传统节日",
+  "category": "festivals",
+  "coverIcon": "🧧",
+  "grade": 2,
+  "version": "1.0.0",
+  "lastUpdated": "2024-06-08",
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "小朋友，你知道吗？每年正月初一，是中国最最热闹的节日——春节！"
+    },
+    {
+      "type": "paragraph",
+      "text": "春节也叫\"过年\"。传说很久以前，有一只叫\"年\"的怪兽，每到除夕就跑出来吓唬人。后来人们发现年兽害怕红色、火光和响声，就贴红春联、放鞭炮、挂红灯笼，把年兽赶跑啦！"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "爷爷",
+      "text": "孙儿呀，过年为什么要吃饺子呀？"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小华",
+      "text": "因为饺子长得像元宝，吃了会发财！"
+    },
+    {
+      "type": "story",
+      "text": "还有一个有趣的传说：古代有个叫\"万年\"的小伙子，发明了日历，所以大家把新年叫\"过年\"。过年的时候，全家人会一起吃年夜饭、看春晚、给长辈拜年，还能收到压岁钱哦！"
+    },
+    {
+      "type": "image",
+      "icon": "🎆",
+      "caption": "噼里啪啦！放鞭炮啦！"
+    },
+    {
+      "type": "image",
+      "icon": "🥟",
+      "caption": "热腾腾的饺子出锅啦！"
+    },
+    {
+      "type": "knowledge",
+      "title": "📚 春节习俗大盘点",
+      "items": [
+        "贴春联、贴福字——福气到家",
+        "放鞭炮、烟花——赶走年兽",
+        "吃年夜饭——团圆饭",
+        "吃饺子——长得像元宝，寓意发财",
+        "吃鱼——\"年年有余\"",
+        "发红包——长辈给晚辈压岁钱",
+        "拜年——给亲戚朋友送祝福",
+        "舞狮舞龙——热闹喜庆"
+      ]
+    },
+    {
+      "type": "poem",
+      "title": "古诗欣赏",
+      "content": "爆竹声中一岁除，\n春风送暖入屠苏。\n千门万户曈曈日，\n总把新桃换旧符。",
+      "author": "王安石《元日》"
+    },
+    {
+      "type": "vocabulary",
+      "title": "生字乐园",
+      "words": [
+        { "char": "春", "pinyin": "chūn", "tone": 1 },
+        { "char": "节", "pinyin": "jié", "tone": 2 },
+        { "char": "年", "pinyin": "nián", "tone": 2 },
+        { "char": "兽", "pinyin": "shòu", "tone": 4 },
+        { "char": "爆", "pinyin": "bào", "tone": 4 },
+        { "char": "竹", "pinyin": "zhú", "tone": 2 },
+        { "char": "福", "pinyin": "fú", "tone": 2 },
+        { "char": "饺", "pinyin": "jiǎo", "tone": 3 }
+      ]
+    },
+    {
+      "type": "question",
+      "text": "小朋友，你最喜欢春节的哪个习俗？为什么？"
+    }
+  ]
+}

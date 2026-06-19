@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>🧩 拼音消消乐 - 华夏小课堂</title>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/dist/index.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #ffecd2, #fcb69f);
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .game-wrap {
+    max-width: 800px; margin: 0 auto; background: white;
+    border-radius: 24px; padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  }
+  .top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  .top h1 { color: #e74c3c; font-size: 24px; }
+  .back-btn {
+    background: #f0f0f0; border: none; padding: 8px 16px;
+    border-radius: 20px; cursor: pointer; font-size: 14px;
+  }
+  .score-board {
+    display: flex; gap: 12px; margin-bottom: 20px;
+  }
+  .score-box {
+    flex: 1; padding: 12px; background: #fff3e0;
+    border-radius: 12px; text-align: center;
+  }
+  .score-box .label { font-size: 12px; color: #888; }
+  .score-box .value { font-size: 24px; font-weight: bold; color: #e65100; }
+  .instruction {
+    background: #e3f2fd; padding: 12px 16px; border-radius: 12px;
+    margin-bottom: 20px; color: #1976d2; font-size: 14px;
+  }
+  .word-pool {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+    min-height: 80px; padding: 12px; background: #fafafa;
+    border-radius: 12px;
+  }
+  .pinyin-pool {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px; margin-bottom: 24px;
+  }
+  .card {
+    padding: 14px; border-radius: 12px; cursor: pointer;
+    text-align: center; font-size: 18px; font-weight: bold;
+    transition: all 0.2s; user-select: none;
+    border: 2px solid transparent;
+  }
+  .card-hanzi {
+    background: #fff; color: #333; border: 2px solid #ffc107;
+    font-size: 28px; font-family: 楷体;
+  }
+  .card-pinyin {
+    background: #e1f5fe; color: #01579b;
+  }
+  .card-hanzi.selected { background: #fff59d; transform: scale(1.05); }
+  .card-pinyin.selected { background: #4fc3f7; color: white; }
+  .card.matched { opacity: 0.3; pointer-events: none; animation: fadeOut 0.5s; }
+  @keyframes fadeOut { to { transform: scale(0.8); } }
+  .card:hover:not(.matched) { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+  .restart-btn {
+    display: block; margin: 20px auto; padding: 12px 32px;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white; border: none; border-radius: 24px; cursor: pointer;
+    font-size: 16px; font-weight: bold;
+  }
+  .restart-btn:hover { transform: scale(1.05); }
+  .win-banner {
+    display: none; text-align: center; padding: 30px;
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    color: white; border-radius: 16px; margin-bottom: 20px;
+    font-size: 24px; font-weight: bold;
+    animation: bounce 1s;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+</style>
+</head>
+<body>
+<div class="game-wrap">
+  <div class="top">
+    <button class="back-btn" onclick="window.close()">← 返回</button>
+    <h1>🧩 拼音消消乐</h1>
+    <span></span>
+  </div>
+
+  <div class="win-banner" id="win-banner">🎉 恭喜你全部配对成功！🎉</div>
+
+  <div class="score-board">
+    <div class="score-box"><div class="label">得分</div><div class="value" id="score">0</div></div>
+    <div class="score-box"><div class="label">连击 🔥</div><div class="value" id="combo">0</div></div>
+    <div class="score-box"><div class="label">剩余</div><div class="value" id="remain">8</div></div>
+  </div>
+
+  <div class="instruction">
+    👉 点一个<strong style="color:#e65100;">汉字</strong>，再点对应的<strong style="color:#01579b;">拼音</strong>，配对成功就消失！<br>
+    👉 点汉字可以听发音 💡
+  </div>
+
+  <div class="word-pool" id="word-pool"></div>
+  <div class="pinyin-pool" id="pinyin-pool"></div>
+
+  <button class="restart-btn" onclick="initGame()">🔄 再来一局</button>
+</div>
+
+<script>
+// ====== TTS ======
+const synth = window.speechSynthesis;
+let ttsVoice = null;
+function loadVoice() {
+  const voices = synth.getVoices();
+  const zh = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name));
+  ttsVoice = zh || voices.find(v => /zh/i.test(v.lang));
+}
+loadVoice();
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoice;
+
+function speak(text) {
+  if (!ttsVoice) loadVoice();
+  if (!ttsVoice) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.voice = ttsVoice; u.lang = ttsVoice.lang || 'zh-CN'; u.rate = 0.85;
+  synth.speak(u);
+}
+
+// ====== 游戏数据 ======
+const WORDS = [
+  { hz: '春', py: 'chūn' }, { hz: '节', py: 'jié' }, { hz: '年', py: 'nián' },
+  { hz: '龙', py: 'lóng' }, { hz: '舟', py: 'zhōu' }, { hz: '月', py: 'yuè' },
+  { hz: '花', py: 'huā' }, { hz: '灯', py: 'dēng' }, { hz: '雨', py: 'yǔ' },
+  { hz: '山', py: 'shān' }, { hz: '水', py: 'shuǐ' }, { hz: '风', py: 'fēng' }
+];
+
+let state = { selectedHz: null, selectedPy: null, score: 0, combo: 0, matched: 0 };
+const TOTAL = 8;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function initGame() {
+  document.getElementById('win-banner').style.display = 'none';
+  state = { selectedHz: null, selectedPy: null, score: 0, combo: 0, matched: 0 };
+  updateScore();
+
+  const chosen = shuffle(WORDS).slice(0, TOTAL);
+  const wordPool = document.getElementById('word-pool');
+  const pinyinPool = document.getElementById('pinyin-pool');
+  wordPool.innerHTML = ''; pinyinPool.innerHTML = '';
+
+  // 汉字行
+  chosen.forEach((w, i) => {
+    const card = document.createElement('div');
+    card.className = 'card card-hanzi';
+    card.textContent = w.hz;
+    card.dataset.id = i;
+    card.dataset.pinyin = w.py;
+    card.onclick = () => {
+      speak(w.hz);
+      document.querySelectorAll('.card-hanzi.selected').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.selectedHz = card;
+      tryMatch();
+    };
+    wordPool.appendChild(card);
+  });
+
+  // 拼音行（打乱）
+  shuffle(chosen).forEach((w, i) => {
+    const card = document.createElement('div');
+    card.className = 'card card-pinyin';
+    card.textContent = w.py;
+    card.dataset.id = i;
+    card.dataset.pinyin = w.py;
+    card.onclick = () => {
+      document.querySelectorAll('.card-pinyin.selected').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.selectedPy = card;
+      tryMatch();
+    };
+    pinyinPool.appendChild(card);
+  });
+}
+
+function tryMatch() {
+  if (!state.selectedHz || !state.selectedPy) return;
+  const hz = state.selectedHz, py = state.selectedPy;
+  if (hz.dataset.pinyin === py.dataset.pinyin && hz.dataset.id !== py.dataset.id) {
+    // 配对成功
+    hz.classList.add('matched'); py.classList.add('matched');
+    state.matched++;
+    state.combo++;
+    state.score += 10 * state.combo;
+    speak('太棒了！');
+    updateScore();
+    if (state.matched >= TOTAL) {
+      setTimeout(() => {
+        document.getElementById('win-banner').style.display = 'block';
+        speak('恭喜你全部配对成功！');
+      }, 400);
+    }
+  } else {
+    state.combo = 0;
+    updateScore();
+    if (hz.dataset.pinyin !== py.dataset.pinyin) {
+      // 错配，提示音
+      setTimeout(() => speak('再试试'), 100);
+    }
+  }
+  state.selectedHz = null; state.selectedPy = null;
+  setTimeout(() => {
+    document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+  }, 200);
+}
+
+function updateScore() {
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('combo').textContent = state.combo;
+  document.getElementById('remain').textContent = TOTAL - state.matched;
+}
+
+initGame();
+</script>
+</body>
+</html>

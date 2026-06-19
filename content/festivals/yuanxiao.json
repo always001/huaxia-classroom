@@ -1,0 +1,80 @@
+{
+  "id": "yuanxiao",
+  "title": "元宵节：灯火闹十五",
+  "subtitle": "东方朔与元宵姑娘",
+  "category": "festivals",
+  "coverIcon": "🏮",
+  "grade": 2,
+  "version": "1.0.0",
+  "lastUpdated": "2024-06-08",
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "小朋友，正月十五元宵节到啦！这是春节过后的第一个大节日哦！"
+    },
+    {
+      "type": "paragraph",
+      "text": "元宵节最热闹的事就是看花灯、猜灯谜、吃汤圆啦！到了晚上，家家户户都会挂出五颜六色的灯笼，整条街都亮堂堂的！"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "爸爸",
+      "text": "宝宝，你知道元宵节为什么要吃汤圆吗？"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小元",
+      "text": "因为汤圆圆圆的，代表一家人团团圆圆！"
+    },
+    {
+      "type": "story",
+      "text": "传说汉武帝时有个大臣叫东方朔，他机智又善良。有一年冬天，一个叫元宵的姑娘要进宫伺候皇上，再也见不到家人。东方朔想了一个办法：让汉武帝在正月十五这天让大家挂灯笼、吃\"元宵\"（汤圆），全城都热闹起来。皇上听了他的主意，元宵姑娘终于能和家人团圆啦！这就是元宵节的由来。"
+    },
+    {
+      "type": "image",
+      "icon": "🏮",
+      "caption": "花灯一条街，真漂亮！"
+    },
+    {
+      "type": "image",
+      "icon": "🍡",
+      "caption": "白白的汤圆，甜甜的芝麻馅儿"
+    },
+    {
+      "type": "knowledge",
+      "title": "📚 元宵节小知识",
+      "items": [
+        "元宵节是 ✨农历正月十五✨",
+        "元宵节又叫\"上元节\"\"灯节\"",
+        "南方吃汤圆，北方滚元宵——其实都是糯米团子",
+        "猜灯谜：把谜语写在纸条贴在灯上，人们边看灯边猜谜",
+        "舞龙舞狮是元宵节的保留节目",
+        "宋代元宵节要热闹整整 5 天呢！"
+      ]
+    },
+    {
+      "type": "poem",
+      "title": "古诗欣赏",
+      "content": "去年元夜时，\n花市灯如昼。\n月上柳梢头，\n人约黄昏后。",
+      "author": "欧阳修《生查子·元夕》"
+    },
+    {
+      "type": "vocabulary",
+      "title": "生字乐园",
+      "words": [
+        { "char": "元", "pinyin": "yuán", "tone": 2 },
+        { "char": "宵", "pinyin": "xiāo", "tone": 1 },
+        { "char": "灯", "pinyin": "dēng", "tone": 1 },
+        { "char": "谜", "pinyin": "mí", "tone": 2 },
+        { "char": "汤", "pinyin": "tāng", "tone": 1 },
+        { "char": "圆", "pinyin": "yuán", "tone": 2 },
+        { "char": "龙", "pinyin": "lóng", "tone": 2 },
+        { "char": "舞", "pinyin": "wǔ", "tone": 3 }
+      ]
+    },
+    {
+      "type": "question",
+      "text": "小朋友，你能想出一个灯谜吗？"
+    }
+  ]
+}

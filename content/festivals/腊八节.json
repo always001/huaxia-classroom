@@ -1,0 +1,54 @@
+{
+  "id": "腊八节",
+  "title": "腊八节：传统里的中国",
+  "subtitle": "了解中国传统文化",
+  "category": "festivals",
+  "coverIcon": "🎊",
+  "grade": "2",
+  "version": "1.0.0",
+  "lastUpdated": "2026-06-19",
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "小朋友，你知道吗？每年农历___，是中国传统的腊八节！"
+    },
+    {
+      "type": "paragraph",
+      "text": "腊八节是中国非常重要的节日，这一天有好多有趣的习俗呢！"
+    },
+    {
+      "type": "story",
+      "text": "传说很久很久以前，腊八节这一天发生了一个动人的故事……（请在此补充具体故事内容）"
+    },
+    {
+      "type": "image",
+      "icon": "🎊",
+      "caption": "腊八节的标志性景象"
+    },
+    {
+      "type": "knowledge",
+      "title": "📚 文化小知识",
+      "items": [
+        "腊八节的来历（请补充）",
+        "腊八节的主要习俗：……",
+        "腊八节的传统美食：……",
+        "腊八节的诗词：……"
+      ]
+    },
+    {
+      "type": "poem",
+      "title": "古诗欣赏",
+      "content": "请在此填入与腊八节相关的古诗\n（每行一句）",
+      "author": "作者"
+    },
+    {
+      "type": "vocabulary",
+      "title": "生字乐园",
+      "words": []
+    },
+    {
+      "type": "question",
+      "text": "小朋友，你最喜欢腊八节的哪个习俗？为什么？"
+    }
+  ]
+}

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>🔗 成语接龙 - 华夏小课堂</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #c9d6ff, #e2e2e2);
+    min-height: 100vh; padding: 20px;
+  }
+  .game-wrap {
+    max-width: 800px; margin: 0 auto; background: white;
+    border-radius: 24px; padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  h1 { color: #5e35b1; }
+  .back-btn { background: #f0f0f0; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; }
+  .stats { display: flex; gap: 12px; margin-bottom: 20px; }
+  .stat { flex: 1; padding: 12px; background: #ede7f6; border-radius: 12px; text-align: center; }
+  .stat .label { font-size: 12px; color: #666; }
+  .stat .value { font-size: 24px; font-weight: bold; color: #4527a0; }
+
+  .chain-area {
+    min-height: 200px; padding: 16px;
+    background: #fafafa; border-radius: 16px; margin-bottom: 20px;
+    border: 2px dashed #b39ddb;
+  }
+  .chain-step {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px; padding: 10px;
+    background: white; border-radius: 8px;
+    border-left: 4px solid #7e57c2;
+  }
+  .chain-step .who { font-size: 12px; color: #666; min-width: 60px; }
+  .chain-step .idiom {
+    font-size: 22px; font-weight: bold; color: #4527a0;
+    font-family: 楷体;
+  }
+  .chain-step .meaning { font-size: 12px; color: #888; }
+
+  .current-task {
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    padding: 16px; border-radius: 12px; margin-bottom: 16px;
+    text-align: center;
+  }
+  .current-task .label { color: #e65100; font-size: 14px; }
+  .current-task .word {
+    font-size: 32px; font-weight: bold; color: #bf360c;
+    font-family: 楷体; margin: 8px 0;
+  }
+  .current-task .pinyin { color: #d84315; font-size: 18px; }
+
+  .input-row {
+    display: flex; gap: 8px; margin-bottom: 12px;
+  }
+  .input-row input {
+    flex: 1; padding: 12px 16px; font-size: 20px;
+    border: 2px solid #b39ddb; border-radius: 12px;
+    font-family: 楷体;
+  }
+  .input-row input:focus { outline: none; border-color: #7e57c2; }
+  .input-row button {
+    padding: 12px 24px; background: linear-gradient(135deg, #7e57c2, #4527a0);
+    color: white; border: none; border-radius: 12px;
+    cursor: pointer; font-size: 16px; font-weight: bold;
+  }
+
+  .hints { padding: 12px; background: #f5f5f5; border-radius: 12px; }
+  .hints .label { font-size: 12px; color: #666; margin-bottom: 8px; }
+  .hint-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .hint-btn {
+    padding: 6px 14px; background: white; border: 1px solid #b39ddb;
+    border-radius: 20px; cursor: pointer; font-size: 16px;
+    font-family: 楷体;
+  }
+  .hint-btn:hover { background: #ede7f6; }
+
+  .msg {
+    text-align: center; padding: 12px; margin: 12px 0;
+    border-radius: 12px; font-weight: bold; display: none;
+  }
+  .msg.ok { background: #c8e6c9; color: #2e7d32; }
+  .msg.err { background: #ffcdd2; color: #c62828; }
+
+  .restart-btn {
+    display: block; margin: 20px auto; padding: 10px 32px;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white; border: none; border-radius: 20px;
+    cursor: pointer; font-size: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="game-wrap">
+  <div class="top">
+    <button class="back-btn" onclick="window.close()">← 返回</button>
+    <h1>🔗 成语接龙</h1>
+    <span></span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="label">回合</div><div class="value" id="round">1</div></div>
+    <div class="stat"><div class="label">得分</div><div class="value" id="score">0</div></div>
+    <div class="stat"><div class="label">剩余生命</div><div class="value" id="lives">❤️❤️❤️</div></div>
+  </div>
+
+  <div class="current-task" id="current-task">
+    <div class="label">请你接一个四字成语，开头是：</div>
+    <div class="word" id="task-word">守</div>
+    <div class="pinyin" id="task-pinyin">shǒu</div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="chain-area" id="chain-area"></div>
+
+  <div class="input-row">
+    <input type="text" id="user-input" maxlength="4" placeholder="请输入四字成语">
+    <button onclick="submitAnswer()">提交</button>
+  </div>
+
+  <div class="hints">
+    <div class="label">💡 不知道怎么答？点下面的提示：</div>
+    <div class="hint-btns" id="hint-btns"></div>
+  </div>
+
+  <button class="restart-btn" onclick="restartGame()">🔄 重新开始</button>
+</div>
+
+<script>
+const synth = window.speechSynthesis;
+let ttsVoice = null;
+function loadVoice() {
+  const voices = synth.getVoices();
+  ttsVoice = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name))
+          || voices.find(v => /zh/i.test(v.lang));
+}
+loadVoice();
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoice;
+
+function speak(text) {
+  if (!ttsVoice) loadVoice();
+  if (!ttsVoice) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.voice = ttsVoice; u.lang = 'zh-CN'; u.rate = 0.9;
+  synth.speak(u);
+}
+
+// 简易成语库（生产环境应换成大数据集）
+const IDIOMS = {
+  '守': [{w:'守株待兔', m:'守着树桩等兔子。比喻死守经验，不知变通。', p:'shǒu zhū dài tù'}],
+  '兔': [{w:'兔死狐悲', m:'兔子死了狐狸悲伤。比喻因同类的死亡而感到悲伤。', p:'tù sǐ hú bēi'}],
+  '悲': [{w:'悲天悯人', m:'哀叹时世艰辛，怜悯民间疾苦。', p:'bēi tiān mǐn rén'}],
+  '人': [{w:'人山人海', m:'形容人聚集得非常多。', p:'rén shān rén hǎi'}],
+  '海': [{w:'海阔天空', m:'形容大自然的广阔。比喻心胸开阔或想象无拘无束。', p:'hǎi kuò tiān kōng'}],
+  '空': [{w:'空中楼阁', m:'比喻脱离实际的理论或虚构的事物。', p:'kōng zhōng lóu gé'}],
+  '阁': [{w:'阁中帝子', m:'出自王勃《滕王阁序》，指阁楼中的皇子。', p:'gé zhōng dì zǐ'}],
+  '子': [{w:'子虚乌有', m:'指虚构的、不存在的事情。', p:'zǐ xū wū yǒu'}],
+  '有': [{w:'有始有终', m:'有开头也有结尾。形容做事坚持到底。', p:'yǒu shǐ yǒu zhōng'}],
+  '终': [{w:'终身大事', m:'关系一辈子的大事，多指婚姻。', p:'zhōng shēn dà shì'}],
+  '事': [{w:'事半功倍', m:'费力小而收效大。', p:'shì bàn gōng bèi'}],
+  '倍': [{w:'倍道兼行', m:'加倍赶路，一天走两天的路程。', p:'bèi dào jiān xíng'}],
+  '行': [{w:'行行出状元', m:'各行各业都有杰出人才。', p:'háng háng chū zhuàng yuan'}],
+  '元': [{w:'元气淋漓', m:'形容精力旺盛。', p:'yuán qì lín lí'}],
+  '淋': [{w:'淋漓尽致', m:'形容文章或谈话详尽透彻。', p:'lín lí jìn zhì'}],
+  '致': [{w:'致知格物', m:'探究事物的原理而获得知识。', p:'zhì zhī gé wù'}],
+  '物': [{w:'物是人非', m:'东西还是原来的东西，人却已变。', p:'wù shì rén fēi'}],
+  '非': [{w:'非同小可', m:'形容事情重要或情况严重。', p:'fēi tóng xiǎo kě'}]
+};
+
+let state = {
+  round: 1, score: 0, lives: 3,
+  currentChar: '守', lastIdiom: null, history: []
+};
+
+function getPinyin(char) {
+  if (!window.pinyinPro) return '';
+  try {
+    const r = window.pinyinPro.pinyin(char, { toneType: 'symbol', type: 'array' });
+    return r[0] || '';
+  } catch(e) { return ''; }
+}
+
+function renderTask() {
+  document.getElementById('task-word').textContent = state.currentChar;
+  document.getElementById('task-pinyin').textContent = getPinyin(state.currentChar);
+  renderHints();
+}
+
+function renderHistory() {
+  const area = document.getElementById('chain-area');
+  area.innerHTML = state.history.map((h, i) =>
+    `<div class="chain-step">
+      <span class="who">${h.who}</span>
+      <span class="idiom">${h.w}</span>
+      <span class="meaning">${h.m}</span>
+    </div>`
+  ).join('');
+  area.scrollTop = area.scrollHeight;
+}
+
+function renderHints() {
+  const list = IDIOMS[state.currentChar] || [];
+  const cont = document.getElementById('hint-btns');
+  cont.innerHTML = '';
+  list.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'hint-btn';
+    btn.textContent = item.w;
+    btn.onclick = () => {
+      document.getElementById('user-input').value = item.w;
+      speak(item.w);
+    };
+    cont.appendChild(btn);
+  });
+  if (list.length === 0) {
+    cont.innerHTML = '<span style="color:#888;">暂无提示，请换一个开头字</span>';
+  }
+}
+
+function showMsg(text, type) {
+  const m = document.getElementById('msg');
+  m.textContent = text;
+  m.className = 'msg ' + type;
+  m.style.display = 'block';
+  setTimeout(() => m.style.display = 'none', 2000);
+  speak(text);
+}
+
+function submitAnswer() {
+  const input = document.getElementById('user-input');
+  const val = input.value.trim();
+  if (val.length !== 4) {
+    showMsg('❌ 请输入四字成语', 'err');
+    return;
+  }
+  if (val[0] !== state.currentChar) {
+    showMsg('❌ 第一个字必须是 "' + state.currentChar + '"', 'err');
+    return;
+  }
+
+  // 检查答案
+  const idioms = IDIOMS[val[0]] || [];
+  const found = idioms.find(x => x.w === val);
+
+  state.history.push({
+    who: state.round % 2 === 0 ? '👧 你' : '👦 老师',
+    w: val, m: found ? found.m : '(自创成语)'
+  });
+
+  if (found) {
+    state.score += 10;
+    state.round++;
+    state.currentChar = val[3];
+    showMsg('🎉 答对了！+10分', 'ok');
+  } else {
+    state.lives--;
+    state.round++;
+    if (state.lives === 0) {
+      showMsg('💔 游戏结束！最终得分 ' + state.score, 'err');
+      speak('游戏结束');
+      return;
+    } else {
+      showMsg('🤔 这个成语我不太认识，再想想？', 'err');
+    }
+    // 随机换一个开头字
+    const keys = Object.keys(IDIOMS);
+    state.currentChar = keys[Math.floor(Math.random() * keys.length)];
+  }
+
+  document.getElementById('user-input').value = '';
+  document.getElementById('round').textContent = state.round;
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('lives').textContent = '❤️'.repeat(state.lives);
+  renderTask();
+  renderHistory();
+}
+
+function restartGame() {
+  state = { round: 1, score: 0, lives: 3, currentChar: '守', history: [] };
+  document.getElementById('round').textContent = 1;
+  document.getElementById('score').textContent = 0;
+  document.getElementById('lives').textContent = '❤️❤️❤️';
+  renderTask();
+  renderHistory();
+  speak('成语接龙开始啦！');
+}
+
+document.getElementById('user-input').addEventListener('keypress', e => {
+  if (e.key === 'Enter') submitAnswer();
+});
+
+renderTask();
+speak('成语接龙开始啦！请你接一个四字成语');
+</script>
+</body>
+</html>

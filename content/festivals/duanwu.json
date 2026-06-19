@@ -1,0 +1,78 @@
+{
+  "id": "duanwu",
+  "title": "端午节：龙舟与粽香里的中国",
+  "subtitle": "纪念伟大的爱国诗人屈原",
+  "category": "festivals",
+  "coverIcon": "🐉",
+  "grade": 2,
+  "version": "1.0.0",
+  "lastUpdated": "2024-06-08",
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "小朋友，你知道吗？每年农历五月初五，是中国的端午节！"
+    },
+    {
+      "type": "paragraph",
+      "text": "这一天，大人会包粽子，赛龙舟，挂艾草，可热闹啦！"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "妈妈",
+      "text": "宝贝，你知道端午节的由来吗？"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小明",
+      "text": "当然知道啦！是为了纪念伟大的诗人屈原！"
+    },
+    {
+      "type": "story",
+      "text": "很久很久以前，有个叫屈原的人。他非常爱自己的国家，写下了很多美丽的诗篇。后来国家遇到困难，屈原很伤心，就在五月初五这天跳进了汨罗江。人们划着船去找他，把饭团扔进江里喂鱼，希望鱼儿不要伤害屈原叔叔。这就是粽子和龙舟的来历哦！"
+    },
+    {
+      "type": "image",
+      "icon": "🍙",
+      "caption": "香喷喷的粽子，有肉粽、豆沙粽、蛋黄粽……"
+    },
+    {
+      "type": "image",
+      "icon": "🚣",
+      "caption": "锣鼓喧天，龙舟比赛真热闹！"
+    },
+    {
+      "type": "knowledge",
+      "title": "📚 文化小知识",
+      "items": [
+        "端午节是 ✨世界非物质文化遗产✨",
+        "端午节与春节、清明节、中秋节并称中国四大传统节日",
+        "粽子用的粽叶大多是 箬竹叶 或 苇叶",
+        "龙舟比赛已经传到了全世界！"
+      ]
+    },
+    {
+      "type": "poem",
+      "title": "古诗欣赏",
+      "content": "五月五，是端阳。\n门插艾，香满堂。\n吃粽子，撒白糖。\n龙舟下水喜洋洋。",
+      "author": "中国民谣"
+    },
+    {
+      "type": "vocabulary",
+      "title": "生字乐园",
+      "words": [
+        { "char": "端", "pinyin": "duān", "tone": 1 },
+        { "char": "午", "pinyin": "wǔ", "tone": 3 },
+        { "char": "节", "pinyin": "jié", "tone": 2 },
+        { "char": "粽", "pinyin": "zòng", "tone": 4 },
+        { "char": "舟", "pinyin": "zhōu", "tone": 1 },
+        { "char": "屈", "pinyin": "qū", "tone": 1 },
+        { "char": "原", "pinyin": "yuán", "tone": 2 },
+        { "char": "龙", "pinyin": "lóng", "tone": 2 }
+      ]
+    },
+    {
+      "type": "question",
+      "text": "小朋友，你能说出两种你最喜欢的粽子馅儿吗？"
+    }
+  ]
+}

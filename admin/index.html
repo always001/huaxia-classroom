@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>👩‍🏫 华夏小课堂 · 教师后台</title>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/dist/index.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", sans-serif;
+    background: #f5f5f5; color: #333;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #5e35b1, #311b92);
+    color: white; padding: 16px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 22px; font-family: 楷体; }
+  header .actions { display: flex; gap: 8px; }
+  header button {
+    background: rgba(255,255,255,0.2); color: white;
+    border: 1px solid white; padding: 6px 14px;
+    border-radius: 20px; cursor: pointer; font-size: 14px;
+  }
+  header button:hover { background: rgba(255,255,255,0.35); }
+  header button.primary { background: white; color: #5e35b1; font-weight: bold; }
+
+  .container {
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 320px 1fr;
+    gap: 16px; padding: 16px;
+  }
+
+  /* 左侧：导航 */
+  .sidebar {
+    background: white; border-radius: 16px; padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    height: fit-content; position: sticky; top: 16px;
+  }
+  .sidebar h3 { color: #5e35b1; margin-bottom: 12px; font-size: 14px; }
+  .sidebar .field { margin-bottom: 12px; }
+  .sidebar label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+  .sidebar select, .sidebar input[type=text], .sidebar input[type=number] {
+    width: 100%; padding: 8px 12px; border: 1px solid #ddd;
+    border-radius: 8px; font-size: 14px;
+  }
+  .sidebar select:focus, input:focus { outline: none; border-color: #7e57c2; }
+
+  .template-list { margin-top: 16px; }
+  .template-btn {
+    display: block; width: 100%; padding: 10px;
+    margin-bottom: 6px; background: #f5f5f5;
+    border: 1px solid #ddd; border-radius: 8px;
+    cursor: pointer; text-align: left; font-size: 13px;
+    transition: all 0.2s;
+  }
+  .template-btn:hover { background: #ede7f6; border-color: #7e57c2; }
+  .template-btn .icon { margin-right: 8px; }
+
+  .article-list { margin-top: 16px; max-height: 200px; overflow-y: auto; }
+  .article-list-item {
+    padding: 8px; margin-bottom: 4px; background: #fafafa;
+    border-radius: 6px; cursor: pointer; font-size: 13px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .article-list-item:hover { background: #ede7f6; }
+  .article-list-item .del { color: #c62828; cursor: pointer; }
+
+  /* 右侧：编辑区 */
+  .main {
+    background: white; border-radius: 16px; padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    min-height: 600px;
+  }
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 16px;
+    border-bottom: 2px solid #f0f0f0;
+  }
+  .tab {
+    padding: 10px 20px; cursor: pointer;
+    border: none; background: none; font-size: 14px;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+  }
+  .tab.active { color: #5e35b1; border-bottom-color: #5e35b1; font-weight: bold; }
+
+  .form-row { margin-bottom: 14px; }
+  .form-row label {
+    display: block; font-size: 13px; color: #555;
+    margin-bottom: 6px; font-weight: bold;
+  }
+  .form-row input, .form-row textarea, .form-row select {
+    width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+  }
+  .form-row textarea { resize: vertical; min-height: 80px; }
+  .form-row input:focus, textarea:focus, select:focus {
+    outline: none; border-color: #7e57c2;
+  }
+
+  .btn {
+    padding: 10px 20px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: bold;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: linear-gradient(135deg, #7e57c2, #4527a0); color: white; }
+  .btn-secondary { background: #f0f0f0; color: #333; }
+  .btn-danger { background: #c62828; color: white; }
+  .btn-success { background: #2e7d32; color: white; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+
+  /* 内容块编辑器 */
+  .block-editor {
+    background: #fafafa; border: 2px dashed #b39ddb;
+    border-radius: 12px; padding: 16px; margin-bottom: 12px;
+    position: relative;
+  }
+  .block-editor .block-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .block-editor .block-type {
+    background: #7e57c2; color: white; padding: 4px 12px;
+    border-radius: 12px; font-size: 12px;
+  }
+  .block-editor .block-del {
+    background: #ffcdd2; color: #c62828; border: none;
+    width: 28px; height: 28px; border-radius: 50%;
+    cursor: pointer; font-weight: bold;
+  }
+  .block-editor textarea {
+    width: 100%; min-height: 60px; padding: 8px;
+    border: 1px solid #ddd; border-radius: 6px;
+    font-family: inherit; font-size: 14px;
+  }
+  .block-editor .sub-row {
+    display: flex; gap: 8px; margin-top: 8px; align-items: center;
+  }
+  .block-editor .sub-row input {
+    flex: 1; padding: 6px 10px; border: 1px solid #ddd;
+    border-radius: 6px; font-size: 13px;
+  }
+  .block-editor .vocab-list {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+  }
+  .vocab-chip {
+    background: white; border: 2px solid #4caf50;
+    padding: 6px 10px; border-radius: 8px;
+    display: flex; align-items: center; gap: 6px;
+    font-family: 楷体;
+  }
+  .vocab-chip .py { font-size: 11px; color: #e74c3c; font-family: serif; }
+  .vocab-chip .x { color: #c62828; cursor: pointer; font-weight: bold; }
+
+  .add-block-bar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding: 12px; background: #f5f5f5;
+    border-radius: 12px; margin-bottom: 16px;
+  }
+  .add-block-btn {
+    padding: 8px 14px; background: white; border: 1px solid #ddd;
+    border-radius: 20px; cursor: pointer; font-size: 13px;
+  }
+  .add-block-btn:hover { background: #ede7f6; border-color: #7e57c2; }
+
+  /* 预览 */
+  .preview-area {
+    background: #fffaf0; padding: 20px; border-radius: 12px;
+    margin-top: 16px; min-height: 200px;
+    max-height: 500px; overflow-y: auto;
+  }
+  .preview-area .pv-block {
+    margin: 12px 0; padding: 12px; background: white;
+    border-radius: 8px;
+  }
+
+  /* 提示信息 */
+  .toast {
+    position: fixed; top: 80px; right: 20px;
+    padding: 12px 20px; border-radius: 8px;
+    color: white; font-weight: bold; z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  .toast.success { background: #2e7d32; }
+  .toast.error { background: #c62828; }
+  .toast.info { background: #1565c0; }
+
+  /* 田字格预览样式 */
+  .pv-tg {
+    display: inline-block; text-align: center; margin: 4px;
+  }
+  .pv-tg .py { color: #e74c3c; font-size: 14px; height: 20px; }
+  .pv-tg .cell {
+    width: 50px; height: 50px; border: 2px solid #333;
+    position: relative; background: #fffdf5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-family: 楷体;
+  }
+  .pv-tg .cell::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 50%;
+    border-top: 1.5px dashed #e67e22;
+  }
+  .pv-tg .cell::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 50%;
+    border-left: 1.5px dashed #e67e22;
+  }
+
+  .status-bar {
+    padding: 8px 16px; background: #fff3e0; border-radius: 8px;
+    font-size: 13px; color: #e65100; margin-bottom: 16px;
+  }
+  .status-bar.ok { background: #c8e6c9; color: #2e7d32; }
+  .status-bar.warn { background: #fff9c4; color: #f57f17; }
+
+  .field-group { display: flex; gap: 12px; }
+  .field-group .form-row { flex: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>👩‍🏫 华夏小课堂 · 教师后台</h1>
+  <div class="actions">
+    <button onclick="window.open('../index.html', '_blank')">👀 学生端</button>
+    <button onclick="loadArticleFromLocal()" title="从浏览器加载已保存文章">📂 加载</button>
+    <button class="primary" onclick="exportJSON()">💾 导出 JSON</button>
+  </div>
+</header>
+
+<div class="container">
+  <!-- 左侧 -->
+  <aside class="sidebar">
+    <h3>📋 文章设置</h3>
+    <div class="field">
+      <label>所属分类</label>
+      <select id="meta-category">
+        <option value="festivals">🎊 传统节日</option>
+        <option value="heroes">🦸 历史人物</option>
+        <option value="idioms">📖 成语故事</option>
+        <option value="poems">🖌️ 古诗欣赏</option>
+        <option value="inventions">⚙️ 四大发明</option>
+        <option value="food">🥟 美食文化</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>文章 ID（英文，唯一）</label>
+      <input type="text" id="meta-id" placeholder="例如：duanwu">
+    </div>
+    <div class="field">
+      <label>适用年级</label>
+      <select id="meta-grade">
+        <option value="1">1年级</option>
+        <option value="2" selected>2年级</option>
+        <option value="3">3年级</option>
+        <option value="4">4年级</option>
+        <option value="5">5年级</option>
+        <option value="6">6年级</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>封面大图标（emoji）</label>
+      <input type="text" id="meta-icon" placeholder="🐉" maxlength="2">
+    </div>
+
+    <h3 style="margin-top:20px;">⚡ 一键填充模板</h3>
+    <div class="template-list">
+      <button class="template-btn" onclick="applyTemplate('festival')"><span class="icon">🎊</span>传统节日模板</button>
+      <button class="template-btn" onclick="applyTemplate('hero')"><span class="icon">🦸</span>历史人物模板</button>
+      <button class="template-btn" onclick="applyTemplate('idiom')"><span class="icon">📖</span>成语故事模板</button>
+      <button class="template-btn" onclick="applyTemplate('poem')"><span class="icon">🖌️</span>古诗模板</button>
+      <button class="template-btn" onclick="applyTemplate('food')"><span class="icon">🥟</span>美食模板</button>
+      <button class="template-btn" onclick="applyTemplate('invention')"><span class="icon">⚙️</span>四大发明模板</button>
+    </div>
+
+    <h3 style="margin-top:20px;">📚 我的草稿（浏览器本地）</h3>
+    <div class="article-list" id="draft-list">
+      <p style="color:#999;font-size:12px;">点击"保存草稿"后这里会显示您的文章</p>
+    </div>
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="btn btn-secondary" onclick="saveDraft()" style="flex:1;font-size:12px;padding:6px;">💾 保存草稿</button>
+      <button class="btn btn-danger" onclick="clearAllDrafts()" style="font-size:12px;padding:6px;">🗑️ 清空</button>
+    </div>
+  </aside>
+
+  <!-- 右侧 -->
+  <main class="main">
+    <div class="tabs">
+      <button class="tab active" data-tab="edit" onclick="switchTab('edit')">✏️ 编辑</button>
+      <button class="tab" data-tab="preview" onclick="switchTab('preview')">👁️ 预览</button>
+      <button class="tab" data-tab="vocab" onclick="switchTab('vocab')">📚 生字提取</button>
+    </div>
+
+    <!-- 编辑标签 -->
+    <div id="tab-edit" class="tab-pane">
+      <div class="status-bar" id="status-bar">📝 开始编写您的文章吧！左侧选模板可一键填充示例内容。</div>
+
+      <div class="form-row">
+        <label>📌 文章标题</label>
+        <input type="text" id="meta-title" placeholder="例如：端午节的故事">
+      </div>
+      <div class="form-row">
+        <label>副标题</label>
+        <input type="text" id="meta-subtitle" placeholder="简短副标题">
+      </div>
+
+      <div class="form-row">
+        <label>📖 文章内容</label>
+        <div class="add-block-bar">
+          <button class="add-block-btn" onclick="addBlock('paragraph')">➕ 段落</button>
+          <button class="add-block-btn" onclick="addBlock('dialogue')">➕ 对话</button>
+          <button class="add-block-btn" onclick="addBlock('image')">➕ 配图</button>
+          <button class="add-block-btn" onclick="addBlock('knowledge')">➕ 知识</button>
+          <button class="add-block-btn" onclick="addBlock('poem')">➕ 古诗</button>
+          <button class="add-block-btn" onclick="addBlock('vocabulary')">➕ 生字</button>
+          <button class="add-block-btn" onclick="addBlock('question')">➕ 思考题</button>
+        </div>
+        <div id="blocks-container"></div>
+      </div>
+    </div>
+
+    <!-- 预览标签 -->
+    <div id="tab-preview" class="tab-pane" style="display:none;">
+      <h3 style="margin-bottom:12px;">📱 学生端预览效果</h3>
+      <div class="preview-area" id="preview-area"></div>
+    </div>
+
+    <!-- 生字提取标签 -->
+    <div id="tab-vocab" class="tab-pane" style="display:none;">
+      <h3 style="margin-bottom:12px;">📚 自动提取文中的生字</h3>
+      <p style="color:#666;font-size:14px;margin-bottom:12px;">系统会自动扫描您所有段落，找出汉字并标注拼音。点击任意字可听发音。</p>
+      <button class="btn btn-secondary" onclick="extractAllVocab()">🔍 提取生字</button>
+      <div id="vocab-result" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ===== 工具函数 =====
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function showStatus(msg, type='info') {
+  const bar = document.getElementById('status-bar');
+  bar.textContent = msg;
+  bar.className = 'status-bar ' + type;
+}
+
+function speak(text) {
+  const synth = window.speechSynthesis;
+  let voice = null;
+  const voices = synth.getVoices();
+  voice = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name))
+       || voices.find(v => /zh/i.test(v.lang));
+  if (!voice) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.voice = voice; u.lang = 'zh-CN'; u.rate = 0.85;
+  synth.speak(u);
+}
+
+// ===== 状态 =====
+let article = {
+  id: '', title: '', subtitle: '', category: 'festivals',
+  coverIcon: '', grade: 2, version: '1.0.0',
+  lastUpdated: new Date().toISOString().slice(0,10),
+  content: []
+};
+
+// ===== 标签切换 =====
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+  document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = 'block';
+  if (tab === 'preview') renderPreview();
+}
+
+// ===== 添加内容块 =====
+function addBlock(type, data = null) {
+  const block = data || { type };
+  article.content.push(block);
+  renderBlocks();
+}
+
+function renderBlocks() {
+  const cont = document.getElementById('blocks-container');
+  cont.innerHTML = '';
+  article.content.forEach((block, i) => {
+    const div = document.createElement('div');
+    div.className = 'block-editor';
+
+    const typeNames = {
+      paragraph: '📝 段落', dialogue: '💬 对话', image: '🎨 配图',
+      knowledge: '📚 知识点', poem: '📜 古诗', vocabulary: '✏️ 生字', question: '🤔 思考题'
+    };
+
+    div.innerHTML = `
+      <div class="block-head">
+        <span class="block-type">${typeNames[block.type] || block.type}</span>
+        <button class="block-del" onclick="removeBlock(${i})">×</button>
+      </div>
+    `;
+
+    if (block.type === 'paragraph' || block.type === 'story') {
+      div.innerHTML += `<textarea onchange="article.content[${i}].text=this.value" placeholder="段落内容...">${block.text || ''}</textarea>`;
+    }
+    else if (block.type === 'dialogue') {
+      div.innerHTML += `
+        <div class="sub-row">
+          <input type="text" value="${block.speaker || ''}" placeholder="说话人（如：妈妈）" onchange="article.content[${i}].speaker=this.value">
+        </div>
+        <textarea style="margin-top:8px;" onchange="article.content[${i}].text=this.value" placeholder="说的话...">${block.text || ''}</textarea>
+      `;
+    }
+    else if (block.type === 'image') {
+      div.innerHTML += `
+        <div class="sub-row">
+          <input type="text" value="${block.icon || ''}" placeholder="图标 emoji，如 🐉" onchange="article.content[${i}].icon=this.value">
+          <input type="text" value="${block.caption || ''}" placeholder="图片说明" onchange="article.content[${i}].caption=this.value">
+        </div>
+      `;
+    }
+    else if (block.type === 'knowledge') {
+      div.innerHTML += `
+        <input type="text" value="${block.title || ''}" placeholder="标题（如：文化小知识）" onchange="article.content[${i}].title=this.value">
+        <textarea style="margin-top:8px;" onchange="article.content[${i}].items=this.value.split('\\n').filter(s=>s.trim())" placeholder="每行一条知识点：&#10;端午节是世界非遗&#10;端午有4大习俗">${(block.items || []).join('\n')}</textarea>
+      `;
+    }
+    else if (block.type === 'poem') {
+      div.innerHTML += `
+        <div class="sub-row">
+          <input type="text" value="${block.title || ''}" placeholder="诗题" onchange="article.content[${i}].title=this.value">
+          <input type="text" value="${block.author || ''}" placeholder="作者" onchange="article.content[${i}].author=this.value">
+        </div>
+        <textarea style="margin-top:8px;" onchange="article.content[${i}].content=this.value" placeholder="古诗内容（每行一句）">${block.content || ''}</textarea>
+      `;
+    }
+    else if (block.type === 'vocabulary') {
+      div.innerHTML += `
+        <input type="text" value="${block.title || ''}" placeholder="生字区标题" onchange="article.content[${i}].title=this.value">
+        <div class="vocab-list" id="vocab-list-${i}"></div>
+        <div class="sub-row" style="margin-top:10px;">
+          <input type="text" id="vocab-input-${i}" placeholder="输入汉字（自动加拼音）" maxlength="1" style="font-size:20px;font-family:楷体;">
+          <button class="btn btn-secondary" onclick="addVocab(${i})">➕ 添加</button>
+        </div>
+      `;
+      renderVocabList(i);
+    }
+    else if (block.type === 'question') {
+      div.innerHTML += `<textarea onchange="article.content[${i}].text=this.value" placeholder="思考题...">${block.text || ''}</textarea>`;
+    }
+
+    cont.appendChild(div);
+  });
+
+  if (article.content.length === 0) {
+    cont.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">还没有内容，点击上面的按钮添加 📝</p>';
+  }
+}
+
+function removeBlock(i) {
+  if (!confirm('确定删除这个内容块？')) return;
+  article.content.splice(i, 1);
+  renderBlocks();
+}
+
+function addVocab(blockIdx) {
+  const input = document.getElementById('vocab-input-' + blockIdx);
+  const ch = input.value.trim();
+  if (!ch) return;
+  if (!/[\u4e00-\u9fa5]/.test(ch)) {
+    toast('请输入汉字', 'error');
+    return;
+  }
+  let pinyin = '', tone = 0;
+  if (window.pinyinPro) {
+    try {
+      const r = window.pinyinPro.pinyin(ch, { toneType: 'symbol', type: 'array' });
+      if (r && r[0]) {
+        const m = r[0].match(/^([a-zA-ZüÜ]+)([1-5])?$/);
+        if (m) { pinyin = m[1]; tone = m[2] ? parseInt(m[2]) : 5; }
+      }
+    } catch(e){}
+  }
+  if (!article.content[blockIdx].words) article.content[blockIdx].words = [];
+  article.content[blockIdx].words.push({ char: ch, pinyin, tone });
+  input.value = '';
+  renderVocabList(blockIdx);
+  toast('已添加：' + ch + ' [' + pinyin + ']');
+}
+
+function renderVocabList(blockIdx) {
+  const list = document.getElementById('vocab-list-' + blockIdx);
+  if (!list) return;
+  list.innerHTML = '';
+  (article.content[blockIdx].words || []).forEach((w, j) => {
+    const chip = document.createElement('div');
+    chip.className = 'vocab-chip';
+    chip.innerHTML = `
+      <span style="font-size:24px;">${w.char}</span>
+      <span class="py">${w.pinyin}${w.tone ? '̄'.repeat(1).slice(0,w.tone).slice(-1) || ''}</span>
+      <span class="x" onclick="removeVocab(${blockIdx},${j})">×</span>
+    `;
+    list.appendChild(chip);
+  });
+}
+
+function removeVocab(b, v) {
+  article.content[b].words.splice(v, 1);
+  renderVocabList(b);
+}
+
+// ===== 模板 =====
+function applyTemplate(type) {
+  const templates = {
+    festival: {
+      id: 'muban-jieri', title: '节日名称', subtitle: '节日简介',
+      icon: '🎊', content: [
+        { type: 'paragraph', text: '小朋友，你知道吗？每年农历___，是中国___节！' },
+        { type: 'story', text: '传说很久以前...' },
+        { type: 'knowledge', title: '📚 文化小知识', items: ['习俗1', '习俗2', '习俗3'] },
+        { type: 'poem', title: '古诗欣赏', content: '古诗内容', author: '作者' },
+        { type: 'vocabulary', title: '生字乐园', words: [] },
+        { type: 'question', text: '小朋友，你想到了什么？' }
+      ]
+    },
+    hero: {
+      id: 'muban-renwu', title: '人物名', subtitle: '朝代·身份',
+      icon: '🦸', content: [
+        { type: 'paragraph', text: '今天我们来认识一位伟大的人物...' },
+        { type: 'story', text: '他/她的故事...' },
+        { type: 'knowledge', title: '📚 名言/贡献', items: ['成就1', '成就2'] },
+        { type: 'vocabulary', title: '生字乐园', words: [] },
+        { type: 'question', text: '你最佩服他/她什么？' }
+      ]
+    },
+    idiom: {
+      id: 'muban-chengyu', title: '成语名称', subtitle: '四字成语故事',
+      icon: '📖', content: [
+        { type: 'paragraph', text: '今天我们学习成语「___」' },
+        { type: 'story', text: '这个成语来自...' },
+        { type: 'knowledge', title: '📚 释义', items: ['字面意思', '引申意思', '造个句子：……'] },
+        { type: 'vocabulary', title: '生字乐园', words: [] },
+        { type: 'question', text: '你能用这个成语造句吗？' }
+      ]
+    },
+    poem: {
+      id: 'muban-gushi', title: '诗题', subtitle: '作者·朝代',
+      icon: '🖌️', content: [
+        { type: 'paragraph', text: '今天我们来读一首古诗...' },
+        { type: 'poem', title: '古诗原文', content: '诗的内容', author: '作者' },
+        { type: 'knowledge', title: '📚 诗词大意', items: ['句1意思', '句2意思', '整首诗意思'] },
+        { type: 'vocabulary', title: '生字乐园', words: [] },
+        { type: 'question', text: '你最喜欢哪一句？为什么？' }
+      ]
+    },
+    food: {
+      id: 'muban-meishi', title: '美食名称', subtitle: '中国美食故事',
+      icon: '🥟', content: [
+        { type: 'paragraph', text: '今天我们聊聊美食...' },
+        { type: 'story', text: '这道美食的来历...' },
+        { type: 'knowledge', title: '📚 美食小知识', items: ['主要食材', '做法', '地区'] },
+        { type: 'vocabulary', title: '生字乐园', words: [] },
+        { type: 'question', text: '你最爱吃什么？' }
+      ]
+    },
+    invention: {
+      id: 'muban-faming', title: '发明名称', subtitle: '改变世界',
+      icon: '⚙️', content: [
+        { type: 'paragraph', text: '今天我们认识中国的伟大发明...' },
+        { type: 'story', text: '发明的故事...' },
+        { type: 'knowledge', title: '📚 影响', items: ['对中国的意义', '对世界的意义'] },
+        { type: 'vocabulary', title: '生字乐园', words: [] },
+        { type: 'question', text: '如果没有这个发明，世界会怎样？' }
+      ]
+    }
+  };
+
+  const t = templates[type];
+  if (!t) return;
+  article = {
+    id: t.id, title: t.title, subtitle: t.subtitle, category: document.getElementById('meta-category').value,
+    coverIcon: t.icon, grade: 2, version: '1.0.0',
+    lastUpdated: new Date().toISOString().slice(0,10),
+    content: JSON.parse(JSON.stringify(t.content))
+  };
+  syncMetaToUI();
+  renderBlocks();
+  toast('✅ 模板已应用，请修改内容！');
+}
+
+function syncMetaToUI() {
+  document.getElementById('meta-id').value = article.id || '';
+  document.getElementById('meta-title').value = article.title || '';
+  document.getElementById('meta-subtitle').value = article.subtitle || '';
+  document.getElementById('meta-category').value = article.category;
+  document.getElementById('meta-grade').value = article.grade;
+  document.getElementById('meta-icon').value = article.coverIcon || '';
+}
+
+function syncMetaFromUI() {
+  article.id = document.getElementById('meta-id').value;
+  article.title = document.getElementById('meta-title').value;
+  article.subtitle = document.getElementById('meta-subtitle').value;
+  article.category = document.getElementById('meta-category').value;
+  article.grade = parseInt(document.getElementById('meta-grade').value);
+  article.coverIcon = document.getElementById('meta-icon').value;
+}
+
+// ===== 预览 =====
+function renderPreview() {
+  syncMetaFromUI();
+  const out = document.getElementById('preview-area');
+  out.innerHTML = `
+    <h2 style="color:#e74c3c;text-align:center;">${article.coverIcon || '📖'} ${article.title || '未命名'}</h2>
+    <p style="text-align:center;color:#888;">${article.subtitle || ''}</p>
+    <hr style="margin:16px 0;border:none;border-top:1px solid #eee;">
+  `;
+  article.content.forEach((block, i) => {
+    const div = document.createElement('div');
+    div.className = 'pv-block';
+    if (block.type === 'paragraph' || block.type === 'story') {
+      div.innerHTML = `<p>${block.text || ''}</p>`;
+    } else if (block.type === 'dialogue') {
+      div.style.background = '#e3f2fd';
+      div.innerHTML = `<strong style="color:#1976d2;">${block.speaker || ''}：</strong>${block.text || ''}`;
+    } else if (block.type === 'image') {
+      div.style.textAlign = 'center';
+      div.innerHTML = `<div style="font-size:60px;">${block.icon || '🎨'}</div><p style="color:#666;font-style:italic;">${block.caption || ''}</p>`;
+    } else if (block.type === 'knowledge') {
+      div.style.background = '#fff3e0';
+      div.innerHTML = `<h4>${block.title || ''}</h4><ul>${(block.items||[]).map(x=>`<li>${x}</li>`).join('')}</ul>`;
+    } else if (block.type === 'poem') {
+      div.style.background = '#f3e5f5';
+      div.innerHTML = `<h4>📜 ${block.title || ''}</h4><pre style="font-family:楷体;font-size:18px;line-height:2;white-space:pre-wrap;">${block.content || ''}</pre><p style="text-align:right;color:#888;">—— ${block.author || ''}</p>`;
+    } else if (block.type === 'vocabulary') {
+      div.style.background = '#e8f5e9';
+      let html = `<h4>${block.title || ''}</h4><div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+      (block.words || []).forEach(w => {
+        html += `<div class="pv-tg"><div class="py">${w.pinyin}</div><div class="cell">${w.char}</div></div>`;
+      });
+      html += '</div>';
+      div.innerHTML = html;
+    } else if (block.type === 'question') {
+      div.style.background = '#fffde7';
+      div.innerHTML = `<strong>🤔 想一想：</strong>${block.text || ''}`;
+    }
+    out.appendChild(div);
+  });
+}
+
+// ===== 生字提取 =====
+function extractAllVocab() {
+  const allText = article.content
+    .filter(b => b.text || b.content)
+    .map(b => (b.text || '') + (b.content || ''))
+    .join('');
+
+  const chars = [...new Set(allText.split('').filter(c => /[\u4e00-\u9fa5]/.test(c)))];
+  const cont = document.getElementById('vocab-result');
+  cont.innerHTML = '';
+
+  if (chars.length === 0) {
+    cont.innerHTML = '<p style="color:#999;">还没有提取到汉字，先写些内容吧～</p>';
+    return;
+  }
+
+  chars.forEach(ch => {
+    let pinyin = '', tone = 0;
+    if (window.pinyinPro) {
+      try {
+        const r = window.pinyinPro.pinyin(ch, { toneType: 'symbol', type: 'array' });
+        if (r && r[0]) {
+          const m = r[0].match(/^([a-zA-ZüÜ]+)([1-5])?$/);
+          if (m) { pinyin = m[1]; tone = m[2] ? parseInt(m[2]) : 5; }
+        }
+      } catch(e){}
+    }
+    const div = document.createElement('div');
+    div.className = 'pv-tg';
+    div.style.cursor = 'pointer';
+    div.innerHTML = `<div class="py">${pinyin}</div><div class="cell">${ch}</div>`;
+    div.title = '点我听发音';
+    div.onclick = () => speak(ch);
+    cont.appendChild(div);
+  });
+
+  toast(`✅ 提取到 ${chars.length} 个汉字`);
+}
+
+// ===== 草稿管理 =====
+function saveDraft() {
+  syncMetaFromUI();
+  if (!article.id || !article.title) {
+    toast('❌ 请填写 ID 和标题', 'error');
+    return;
+  }
+  const drafts = JSON.parse(localStorage.getItem('huaxia_drafts') || '{}');
+  drafts[article.id] = JSON.parse(JSON.stringify(article));
+  localStorage.setItem('huaxia_drafts', JSON.stringify(drafts));
+  toast('💾 草稿已保存到浏览器');
+  renderDraftList();
+}
+
+function renderDraftList() {
+  const drafts = JSON.parse(localStorage.getItem('huaxia_drafts') || '{}');
+  const cont = document.getElementById('draft-list');
+  const ids = Object.keys(drafts);
+  if (ids.length === 0) {
+    cont.innerHTML = '<p style="color:#999;font-size:12px;">还没有草稿</p>';
+    return;
+  }
+  cont.innerHTML = '';
+  ids.forEach(id => {
+    const item = document.createElement('div');
+    item.className = 'article-list-item';
+    item.innerHTML = `
+      <span onclick="loadDraft('${id}')" style="flex:1;cursor:pointer;">${drafts[id].title || id}</span>
+      <span class="del" onclick="deleteDraft('${id}')">🗑️</span>
+    `;
+    cont.appendChild(item);
+  });
+}
+
+function loadDraft(id) {
+  const drafts = JSON.parse(localStorage.getItem('huaxia_drafts') || '{}');
+  if (drafts[id]) {
+    article = JSON.parse(JSON.stringify(drafts[id]));
+    syncMetaToUI();
+    renderBlocks();
+    toast('✅ 已加载草稿：' + id);
+  }
+}
+
+function deleteDraft(id) {
+  if (!confirm('删除草稿 ' + id + '？')) return;
+  const drafts = JSON.parse(localStorage.getItem('huaxia_drafts') || '{}');
+  delete drafts[id];
+  localStorage.setItem('huaxia_drafts', JSON.stringify(drafts));
+  renderDraftList();
+}
+
+function clearAllDrafts() {
+  if (!confirm('清空所有草稿？')) return;
+  localStorage.removeItem('huaxia_drafts');
+  renderDraftList();
+  toast('🗑️ 已清空');
+}
+
+function loadArticleFromLocal() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        article = JSON.parse(ev.target.result);
+        syncMetaToUI();
+        renderBlocks();
+        toast('✅ 已加载文章');
+      } catch (err) {
+        toast('❌ JSON 解析失败', 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ===== 导出 JSON =====
+function exportJSON() {
+  syncMetaFromUI();
+
+  // 校验
+  if (!article.id || !article.title) {
+    toast('❌ 请填写 ID 和标题', 'error');
+    showStatus('❌ 请填写完整的 ID 和标题', 'error');
+    return;
+  }
+  if (article.content.length === 0) {
+    toast('❌ 文章内容为空', 'error');
+    showStatus('❌ 请至少添加一个内容块', 'error');
+    return;
+  }
+
+  article.lastUpdated = new Date().toISOString().slice(0,10);
+
+  const json = JSON.stringify(article, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${article.id}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  toast('💾 已导出 ' + article.id + '.json');
+  showStatus(`✅ 已导出文件，请放入 content/${article.category}/ 目录下`, 'ok');
+
+  // 同时保存到草稿
+  saveDraft();
+}
+
+// ===== 初始化 =====
+renderBlocks();
+renderDraftList();
+
+// 自动同步 meta 字段
+['meta-id','meta-title','meta-subtitle','meta-category','meta-grade','meta-icon'].forEach(id => {
+  document.getElementById(id).addEventListener('change', syncMetaFromUI);
+});
+
+showStatus('👋 欢迎使用教师后台！建议先点击左侧"一键填充模板"，再修改内容。', 'info');
+</script>
+</body>
+</html>

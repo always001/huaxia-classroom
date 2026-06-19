@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>✏️ 田字格描红 - 华夏小课堂</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #a8e6cf, #88d8c0);
+    min-height: 100vh; padding: 20px;
+  }
+  .game-wrap {
+    max-width: 700px; margin: 0 auto; background: white;
+    border-radius: 24px; padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    text-align: center;
+  }
+  h1 { color: #2e7d32; margin-bottom: 16px; }
+  .back-btn {
+    background: #f0f0f0; border: none; padding: 8px 16px;
+    border-radius: 20px; cursor: pointer; font-size: 14px;
+    position: absolute; top: 20px; left: 20px;
+  }
+  .picker {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center; margin-bottom: 24px;
+    padding: 12px; background: #f5f5f5; border-radius: 12px;
+  }
+  .picker button {
+    background: white; border: 2px solid #4caf50;
+    color: #2e7d32; padding: 8px 16px; border-radius: 8px;
+    cursor: pointer; font-size: 20px; font-family: 楷体;
+    transition: all 0.2s;
+  }
+  .picker button:hover { background: #c8e6c9; }
+  .picker button.active { background: #4caf50; color: white; }
+
+  .tianzige-big {
+    width: 320px; height: 320px; margin: 0 auto 20px;
+    border: 3px solid #333; position: relative;
+    background: #fffdf5; touch-action: none;
+  }
+  .tianzige-big::before {
+    content: ""; position: absolute; left: 0; right: 0;
+    top: 50%; border-top: 2px dashed #e67e22;
+  }
+  .tianzige-big::after {
+    content: ""; position: absolute; top: 0; bottom: 0;
+    left: 50%; border-left: 2px dashed #e67e22;
+  }
+  .guide {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 220px; font-family: "KaiTi", "STKaiti", 楷体, serif;
+    color: rgba(0,0,0,0.08); pointer-events: none;
+    line-height: 1;
+  }
+  canvas { position: absolute; top: 0; left: 0; cursor: crosshair; }
+
+  .controls {
+    display: flex; gap: 12px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .ctrl-btn {
+    padding: 10px 20px; border: none; border-radius: 20px;
+    cursor: pointer; font-size: 14px; font-weight: bold;
+  }
+  .btn-clear { background: #ff9800; color: white; }
+  .btn-undo { background: #9e9e9e; color: white; }
+  .btn-speak { background: #2196f3; color: white; }
+  .ctrl-btn:hover { transform: scale(1.05); }
+
+  .pinyin-display {
+    font-size: 32px; color: #e74c3c; margin: 16px 0;
+    font-family: "Times New Roman", serif;
+  }
+  .tip {
+    color: #666; font-size: 14px; margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+<button class="back-btn" onclick="window.close()">← 返回</button>
+
+<div class="game-wrap">
+  <h1>✏️ 田字格描红</h1>
+
+  <div class="picker" id="picker"></div>
+
+  <div class="pinyin-display" id="pinyin-display"></div>
+
+  <div class="tianzige-big">
+    <div class="guide" id="guide">春</div>
+    <canvas id="canvas" width="320" height="320"></canvas>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn btn-speak" onclick="speakCurrent()">🔊 听发音</button>
+    <button class="ctrl-btn btn-undo" onclick="undo()">↶ 撤销</button>
+    <button class="ctrl-btn btn-clear" onclick="clearCanvas()">🗑️ 清空</button>
+  </div>
+
+  <p class="tip">💡 用鼠标或手指在田字格里描字，描完会播语音鼓励哦！</p>
+</div>
+
+<script>
+const synth = window.speechSynthesis;
+let ttsVoice = null;
+function loadVoice() {
+  const voices = synth.getVoices();
+  const zh = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name));
+  ttsVoice = zh || voices.find(v => /zh/i.test(v.lang));
+}
+loadVoice();
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoice;
+
+function speak(text) {
+  if (!ttsVoice) loadVoice();
+  if (!ttsVoice) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.voice = ttsVoice; u.lang = 'zh-CN'; u.rate = 0.85;
+  synth.speak(u);
+}
+
+// 24个字库（带拼音）
+const CHARS = [
+  {hz:'春',py:'chūn'},{hz:'节',py:'jié'},{hz:'年',py:'nián'},{hz:'龙',py:'lóng'},
+  {hz:'舟',py:'zhōu'},{hz:'月',py:'yuè'},{hz:'花',py:'huā'},{hz:'灯',py:'dēng'},
+  {hz:'雨',py:'yǔ'},{hz:'山',py:'shān'},{hz:'水',py:'shuǐ'},{hz:'风',py:'fēng'},
+  {hz:'人',py:'rén'},{hz:'口',py:'kǒu'},{hz:'手',py:'shǒu'},{hz:'足',py:'zú'},
+  {hz:'日',py:'rì'},{hz:'月',py:'yuè'},{hz:'木',py:'mù'},{hz:'禾',py:'hé'},
+  {hz:'天',py:'tiān'},{hz:'地',py:'dì'},{hz:'上',py:'shàng'},{hz:'下',py:'xià'}
+];
+
+let current = CHARS[0];
+let history = [];
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let drawing = false;
+let strokes = 0;
+
+function setupPicker() {
+  const p = document.getElementById('picker');
+  CHARS.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = c.hz;
+    btn.dataset.idx = i;
+    if (i === 0) btn.classList.add('active');
+    btn.onclick = () => {
+      document.querySelectorAll('.picker button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      current = c;
+      document.getElementById('guide').textContent = c.hz;
+      document.getElementById('pinyin-display').textContent = c.py;
+      clearCanvas();
+      speak(c.hz);
+    };
+    p.appendChild(btn);
+  });
+}
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  return { x: x * (canvas.width / rect.width), y: y * (canvas.height / rect.height) };
+}
+
+function startDraw(e) {
+  e.preventDefault();
+  drawing = true;
+  const pos = getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
+
+function draw(e) {
+  if (!drawing) return;
+  e.preventDefault();
+  const pos = getPos(e);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+}
+
+function endDraw() {
+  if (!drawing) return;
+  drawing = false;
+  strokes++;
+  // 保存当前画布到历史
+  history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  if (strokes >= 3 && strokes % 3 === 0) {
+    const praises = ['真棒！', '写得好！', '加油！', '一笔一划真认真！', '继续努力！'];
+    speak(praises[Math.floor(Math.random() * praises.length)]);
+  }
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mouseleave', endDraw);
+canvas.addEventListener('touchstart', startDraw);
+canvas.addEventListener('touchmove', draw);
+canvas.addEventListener('touchend', endDraw);
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  history = [];
+  strokes = 0;
+}
+
+function undo() {
+  if (history.length === 0) return;
+  history.pop();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (history.length > 0) ctx.putImageData(history[history.length - 1], 0, 0);
+}
+
+function speakCurrent() { speak(current.hz); }
+
+setupPicker();
+document.getElementById('guide').textContent = current.hz;
+document.getElementById('pinyin-display').textContent = current.py;
+</script>
+</body>
+</html>

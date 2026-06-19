@@ -1,0 +1,54 @@
+{
+  "id": "重阳节",
+  "title": "重阳节：传统里的中国",
+  "subtitle": "了解中国传统文化",
+  "category": "festivals",
+  "coverIcon": "🎊",
+  "grade": "2",
+  "version": "1.0.0",
+  "lastUpdated": "2026-06-19",
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "小朋友，你知道吗？每年农历___，是中国传统的重阳节！"
+    },
+    {
+      "type": "paragraph",
+      "text": "重阳节是中国非常重要的节日，这一天有好多有趣的习俗呢！"
+    },
+    {
+      "type": "story",
+      "text": "传说很久很久以前，重阳节这一天发生了一个动人的故事……（请在此补充具体故事内容）"
+    },
+    {
+      "type": "image",
+      "icon": "🎊",
+      "caption": "重阳节的标志性景象"
+    },
+    {
+      "type": "knowledge",
+      "title": "📚 文化小知识",
+      "items": [
+        "重阳节的来历（请补充）",
+        "重阳节的主要习俗：……",
+        "重阳节的传统美食：……",
+        "重阳节的诗词：……"
+      ]
+    },
+    {
+      "type": "poem",
+      "title": "古诗欣赏",
+      "content": "请在此填入与重阳节相关的古诗\n（每行一句）",
+      "author": "作者"
+    },
+    {
+      "type": "vocabulary",
+      "title": "生字乐园",
+      "words": []
+    },
+    {
+      "type": "question",
+      "text": "小朋友，你最喜欢重阳节的哪个习俗？为什么？"
+    }
+  ]
+}
