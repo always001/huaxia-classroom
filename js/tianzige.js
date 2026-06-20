@@ -1,30 +1,27 @@
 /**
- * 田字格 + 拼音 + 声调 组件
- * 配合 pinyin-pro 自动转换拼音
+ * 田字格 + 拼音 + 声调 组件（升级版）
+ * ✨ 修复：声调符号位置 + 支持大字号
  */
 
 class TianZiGe {
-  constructor(char, pinyin = '', tone = 0) {
+  constructor(char, pinyin = '', tone = 0, options = {}) {
     this.char = char;
     this.pinyin = pinyin;
     this.tone = tone;
+    this.size = options.size || 'normal';
   }
 
   render(container) {
     const word = document.createElement('div');
-    word.className = 'tianzige-word';
+    word.className = `tianzige-word ${this.size === 'large' ? 'large' : ''}`;
     word.title = '点我读：' + this.char;
 
-    // 拼音行
     if (this.pinyin) {
       const pinyinRow = document.createElement('div');
       pinyinRow.className = 'pinyin-row';
       const toneSpan = document.createElement('span');
-      toneSpan.className = 'tone';
-      // 声调符号
-      const toneMarks = { 1: '¯', 2: '´', 3: 'ˇ', 4: '`', 5: '' };
+      toneSpan.className = 'tone tone-' + this.tone;
       toneSpan.textContent = this.pinyin;
-      toneSpan.setAttribute('data-tone', toneMarks[this.tone] || '');
       pinyinRow.appendChild(toneSpan);
       word.appendChild(pinyinRow);
     } else {
@@ -33,13 +30,11 @@ class TianZiGe {
       word.appendChild(empty);
     }
 
-    // 田字格
     const cell = document.createElement('div');
     cell.className = 'tianzige-cell';
     cell.textContent = this.char;
     word.appendChild(cell);
 
-    // 点击朗读
     word.addEventListener('click', e => {
       e.stopPropagation();
       cell.classList.add('highlight');
@@ -53,9 +48,10 @@ class TianZiGe {
 }
 
 class PinyinLine {
-  constructor(text, customPinyin = {}) {
+  constructor(text, customPinyin = {}, options = {}) {
     this.text = text;
     this.customPinyin = customPinyin;
+    this.size = options.size || 'normal';
     this.words = this._buildWords();
   }
 
@@ -79,9 +75,7 @@ class PinyinLine {
                 tone = m[2] ? parseInt(m[2]) : 5;
               }
             }
-          } catch (e) {
-            console.warn('拼音转换失败:', ch, e);
-          }
+          } catch (e) {}
         }
         words.push({ char: ch, pinyin, tone });
       } else if (/[\s，。！？、；：""''《》（）]/.test(ch)) {
@@ -102,7 +96,7 @@ class PinyinLine {
         span.textContent = w.char;
         line.appendChild(span);
       } else {
-        const tzg = new TianZiGe(w.char, w.pinyin, w.tone);
+        const tzg = new TianZiGe(w.char, w.pinyin, w.tone, { size: this.size });
         tzg.render(line);
       }
     }

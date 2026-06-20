@@ -1,23 +1,46 @@
 /**
- * 华夏小课堂 - 主应用
+ * 华夏小课堂 - 主应用（升级版）
+ * ✨ 新增：段落拼音加大、加显示/隐藏拼音开关
  */
 class HuaXiaApp {
   constructor() {
     this.currentCategory = null;
+    this.currentArticle = null;
+    this.showPinyin = true;  // 默认显示拼音
   }
 
   async init() {
-    // 等待 TTS 就绪
     await new Promise(resolve => {
       if (window.tts.ready) resolve();
       else window.tts.onReady(() => resolve());
     });
-
     this.renderHome();
-    console.log('🎉 华夏小课堂启动完成');
+    this.bindGlobalEvents();
+    console.log('🎉 华夏小课堂启动完成（升级版）');
   }
 
-  /** 首页：分类导航 */
+  /** 全局事件：拼音开关 */
+  bindGlobalEvents() {
+    document.addEventListener('keydown', e => {
+      // 按 P 键切换拼音显示
+      if (e.key === 'p' || e.key === 'P') {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          this.togglePinyin();
+        }
+      }
+    });
+  }
+
+  togglePinyin() {
+    this.showPinyin = !this.showPinyin;
+    document.body.classList.toggle('hide-pinyin', !this.showPinyin);
+    // 更新按钮文字
+    const btn = document.getElementById('pinyin-toggle');
+    if (btn) btn.textContent = this.showPinyin ? '👁️ 隐藏拼音' : '👁️‍🗨️ 显示拼音';
+  }
+
+  /** 首页 */
   renderHome() {
     const root = document.getElementById('app');
     root.innerHTML = `
@@ -26,20 +49,33 @@ class HuaXiaApp {
         <p>读中国故事 · 传中华文化</p>
         <button class="welcome-btn" id="welcome-btn">🔊 点我听介绍</button>
       </div>
+
+      <!-- ✨ 新增：快捷功能区 -->
+      <div class="quick-actions">
+        <button class="qa-btn" onclick="app.openVideoClassroom()">📹 视频课堂</button>
+        <button class="qa-btn" onclick="app.openStudyProgress()">📊 学习记录</button>
+        <button class="qa-btn" onclick="app.togglePinyin()" id="pinyin-toggle">👁️ 隐藏拼音</button>
+      </div>
+
       <div class="categories" id="categories"></div>
+
+      <footer style="text-align:center;padding:30px;color:#888;font-size:13px;">
+        <p>🌟 华夏小课堂 · 让世界听见中国</p>
+        <p style="font-size:12px;">教师入口：<a href="admin/" style="color:#5e35b1;">后台管理</a></p>
+      </footer>
     `;
 
     document.getElementById('welcome-btn').onclick = () => {
-      window.tts.speak('你好小朋友，欢迎来到华夏小课堂！这里有好多有趣的中国故事。点一点，听一听，让我们一起爱上中文！');
+      window.tts.speak('你好小朋友，欢迎来到华夏小课堂！点一点，听一听，让我们一起爱上中文！');
     };
 
     const categories = [
-      { id: 'festivals', name: '传统节日', icon: '🎊', color: '#e74c3c', desc: '春节·端午·中秋...' },
-      { id: 'heroes', name: '历史人物', icon: '🦸', color: '#3498db', desc: '孔子·屈原·花木兰...' },
-      { id: 'idioms', name: '成语故事', icon: '📖', color: '#16a085', desc: '守株待兔·狐假虎威...' },
-      { id: 'poems', name: '古诗欣赏', icon: '🖌️', color: '#9b59b6', desc: '唐诗三百首...' },
-      { id: 'inventions', name: '四大发明', icon: '⚙️', color: '#f39c12', desc: '造纸·印刷·火药·指南针...' },
-      { id: 'food', name: '美食文化', icon: '🥟', color: '#e67e22', desc: '粽子·饺子·汤圆...' }
+      { id: 'festivals',   name: '传统节日', icon: '🎊', color: '#e74c3c', desc: '春节·端午·中秋...' },
+      { id: 'heroes',      name: '历史人物', icon: '🦸', color: '#3498db', desc: '孔子·屈原·花木兰...' },
+      { id: 'idioms',      name: '成语故事', icon: '📖', color: '#16a085', desc: '守株待兔·狐假虎威...' },
+      { id: 'poems',       name: '古诗欣赏', icon: '🖌️', color: '#9b59b6', desc: '唐诗三百首...' },
+      { id: 'inventions',  name: '四大发明', icon: '⚙️', color: '#f39c12', desc: '造纸·印刷·火药·指南针...' },
+      { id: 'food',        name: '美食文化', icon: '🥟', color: '#e67e22', desc: '粽子·饺子·汤圆...' }
     ];
 
     const catContainer = document.getElementById('categories');
@@ -57,7 +93,25 @@ class HuaXiaApp {
     });
   }
 
-  /** 渲染分类下的文章列表 */
+  /** 打开视频课堂 */
+  openVideoClassroom() {
+    if (window.videoClassroom) {
+      window.videoClassroom.open();
+    } else {
+      alert('视频模块未加载');
+    }
+  }
+
+  /** 打开学习进度 */
+  openStudyProgress() {
+    if (window.studyTracker) {
+      window.studyTracker.showProgress();
+    } else {
+      alert('进度模块未加载');
+    }
+  }
+
+  /** 分类列表 */
   async renderCategory(category) {
     this.currentCategory = category;
     const root = document.getElementById('app');
@@ -75,7 +129,7 @@ class HuaXiaApp {
     const articles = await this.loadCategoryIndex(category.id);
     const list = document.getElementById('article-list');
 
-    if (articles.length === 0) {
+    if (!articles || articles.length === 0) {
       list.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">📦 该分类下还没有内容，敬请期待～</p>';
       return;
     }
@@ -96,41 +150,40 @@ class HuaXiaApp {
     });
   }
 
-  /** 加载分类索引 */
   async loadCategoryIndex(category) {
     try {
       const resp = await fetch(`content/${category}/index.json?_=${Date.now()}`);
       if (!resp.ok) throw new Error('not found');
       return await resp.json();
     } catch (e) {
-      // 内置索引（无网络/无文件时使用）
       return this._builtinIndex(category);
     }
   }
 
   _builtinIndex(category) {
     const builtin = {
-      festivals: [
-        { id: 'duanwu', title: '端午节', icon: '🐉', desc: '屈原与粽子的故事' }
-      ],
-      heroes: [],
-      idioms: [],
-      poems: [],
-      inventions: [],
-      food: []
+      festivals: [{ id: 'duanwu', title: '端午节', icon: '🐉', desc: '屈原与粽子的故事' }],
+      heroes: [], idioms: [], poems: [], inventions: [], food: []
     };
     return builtin[category] || [];
   }
 
-  /** 打开一篇文章 */
+  /** 打开文章 */
   async openArticle(category, id) {
     const data = await this.loadArticle(category, id);
     if (!data) {
       alert('加载文章失败：' + id);
       return;
     }
+    this.currentArticle = { category, id, data };
+
+    // 记录学习进度
+    if (window.studyTracker) {
+      window.studyTracker.recordView(category, id, data.title);
+    }
+
     document.getElementById('app').innerHTML = '<div id="reader"></div>';
-    new ArticleRenderer(data).render('reader');
+    new ArticleRenderer(data, this.showPinyin).render('reader');
   }
 
   async loadArticle(category, id) {
@@ -146,11 +199,12 @@ class HuaXiaApp {
 }
 
 /**
- * 文章渲染器
+ * 文章渲染器（升级版：段落加大拼音）
  */
 class ArticleRenderer {
-  constructor(article) {
+  constructor(article, showPinyin = true) {
     this.article = article;
+    this.showPinyin = showPinyin;
   }
 
   render(containerId) {
@@ -182,14 +236,14 @@ class ArticleRenderer {
     `;
     main.appendChild(cover);
 
-    // 各内容块
+    // 内容块
     (this.article.content || []).forEach(block => this._renderBlock(block, main));
     container.appendChild(main);
 
     // 底部
     const footer = document.createElement('div');
     footer.className = 'article-footer';
-    footer.innerHTML = `版本 v${this.article.version || '1.0'} · 更新于 ${this.article.lastUpdated || ''}<br>🌟 华夏小课堂 · 让世界听见中国`;
+    footer.innerHTML = `版本 v${this.article.version || '1.0.0'} · 更新于 ${this.article.lastUpdated || ''}<br>🌟 华夏小课堂 · 让世界听见中国`;
     container.appendChild(footer);
 
     // 绑定事件
@@ -201,13 +255,14 @@ class ArticleRenderer {
     const div = document.createElement('div');
     div.className = `block block-${block.type}`;
     div.dataset.type = block.type;
+    div.dataset.text = block.text || block.content || '';
 
     switch (block.type) {
       case 'paragraph':
       case 'story': {
-        const line = new PinyinLine(block.text);
+        // ✨ 升级：用大字号田字格样式
+        const line = new PinyinLine(block.text, {}, { size: 'large' });
         line.render(div);
-        div.dataset.text = block.text;
         div.onclick = () => window.tts.speak(block.text);
         break;
       }
@@ -216,9 +271,8 @@ class ArticleRenderer {
         div.style.background = '#e3f2fd';
         div.style.borderLeft = '4px solid #2196f3';
         div.innerHTML = `<strong style="color:#1976d2;">💬 ${block.speaker}：</strong>`;
-        const line = new PinyinLine(block.text);
+        const line = new PinyinLine(block.text, {}, { size: 'large' });
         line.render(div);
-        div.dataset.text = block.text;
         div.onclick = () => window.tts.speak(block.text);
         break;
       }
@@ -230,6 +284,7 @@ class ArticleRenderer {
           <div class="emoji-big">${block.icon || '🎨'}</div>
           <div class="caption">${block.caption || ''}</div>
         `;
+        div.onclick = null;
         break;
       }
 
@@ -271,7 +326,6 @@ class ArticleRenderer {
           tzg.render(grid);
         });
         div.appendChild(grid);
-        // 点击标题朗读所有生字
         div.querySelector('h3').onclick = e => {
           e.stopPropagation();
           window.tts.speak((block.words || []).map(w => w.char).join(''));
@@ -309,6 +363,5 @@ class ArticleRenderer {
 window.ArticleRenderer = ArticleRenderer;
 window.HuaXiaApp = HuaXiaApp;
 
-// 启动
 window.app = new HuaXiaApp();
 window.addEventListener('DOMContentLoaded', () => window.app.init());
