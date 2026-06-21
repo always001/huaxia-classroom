@@ -1,7 +1,8 @@
 /**
- * 华夏小课堂 - 主应用（终极版）
- * ✅ 修复：等拼音库就绪后才渲染
- * ✅ 修复：拼音库失败时仍能朗读
+ * 华夏小课堂 - 主应用（修复版）
+ * ✅ 修复：防止重复 init 导致卡死
+ * ✅ 修复：TTS 等不到时不阻塞
+ * ✅ 修复：拼音库失败时仍能显示
  */
 if (typeof HuaXiaApp === 'undefined') {
 
@@ -9,44 +10,57 @@ class HuaXiaApp {
   constructor() {
     this.currentCategory = null;
     this.showPinyin = true;
+    this.initialized = false;  // 防止重复 init
   }
 
   async init() {
-    // 等待 TTS
+    if (this.initialized) {
+      console.warn('⚠️ 已经初始化过了，跳过');
+      return;
+    }
+    this.initialized = true;
+
+    console.log('🚀 开始初始化...');
+
+    // ✅ 关键修复：TTS 等不到也不阻塞
     if (window.tts) {
-      await new Promise(resolve => {
-        if (window.tts.ready) resolve();
-        else window.tts.onReady(() => resolve());
-      });
+      if (window.tts.ready) {
+        console.log('✅ TTS 已就绪');
+      } else {
+        // 用 race 防止卡死：最多等 3 秒
+        await Promise.race([
+          new Promise(resolve => {
+            if (window.tts.ready) return resolve();
+            window.tts.onReady(() => resolve());
+          }),
+          new Promise(resolve => setTimeout(resolve, 3000))
+        ]);
+        console.log(window.tts.ready ? '✅ TTS 就绪' : '⚠️ TTS 超时，继续');
+      }
     }
 
-    // ✅ 等待拼音库（最多 5 秒）
+    // 等拼音库（最多 5 秒）
     await this._waitPinyin(5000);
-
     if (!window.pinyinPro) {
-      console.warn('⚠️ 拼音库未加载，将无法显示拼音');
+      console.warn('⚠️ 拼音库未加载，文章段落将不显示拼音');
     } else {
       console.log('✅ 拼音库就绪');
     }
 
     this.renderHome();
-    this.bindGlobalEvents();
-    console.log('🎉 华夏小课堂启动完成');
+    console.log('🎉 华夏小课堂启动完成！');
   }
 
   _waitPinyin(maxMs) {
     return new Promise(resolve => {
       if (window.pinyinPro) return resolve();
       const start = Date.now();
-      const timer = setInterval(() => {
-        if (window.pinyinPro) {
-          clearInterval(timer);
-          resolve();
-        } else if (Date.now() - start > maxMs) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 100);
+      const check = () => {
+        if (window.pinyinPro) return resolve();
+        if (Date.now() - start > maxMs) return resolve();
+        setTimeout(check, 100);
+      };
+      check();
     });
   }
 
@@ -68,6 +82,11 @@ class HuaXiaApp {
 
   renderHome() {
     const root = document.getElementById('app');
+    if (!root) {
+      console.error('❌ 找不到 #app 元素');
+      return;
+    }
+
     root.innerHTML = `
       <div class="home-header">
         <h1>🏮 华夏小课堂</h1>
@@ -86,9 +105,16 @@ class HuaXiaApp {
       </footer>
     `;
 
-    document.getElementById('welcome-btn').onclick = () => {
-      if (window.tts) window.tts.speak('你好小朋友，欢迎来到华夏小课堂！');
-    };
+    const btn = document.getElementById('welcome-btn');
+    if (btn) {
+      btn.onclick = () => {
+        if (window.tts && window.tts.ready) {
+          window.tts.speak('你好小朋友，欢迎来到华夏小课堂！');
+        } else {
+          alert('语音还没准备好，请稍等再试');
+        }
+      };
+    }
 
     const categories = [
       { id: 'festivals',   name: '传统节日', icon: '🎊', color: '#e74c3c', desc: '春节·端午·中秋...' },
@@ -100,6 +126,9 @@ class HuaXiaApp {
     ];
 
     const catContainer = document.getElementById('categories');
+    if (!catContainer) return;
+    catContainer.innerHTML = '';
+
     categories.forEach(cat => {
       const card = document.createElement('div');
       card.className = 'category-card';
@@ -131,10 +160,13 @@ class HuaXiaApp {
       </div>
       <div class="article-list" id="article-list">加载中...</div>
     `;
-    document.getElementById('back-btn').onclick = () => this.renderHome();
+    const backBtn = document.getElementById('back-btn');
+    if (backBtn) backBtn.onclick = () => this.renderHome();
 
     const articles = await this.loadCategoryIndex(category.id);
     const list = document.getElementById('article-list');
+    if (!list) return;
+
     if (!articles || articles.length === 0) {
       list.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">📦 该分类下还没有内容</p>';
       return;
@@ -164,8 +196,11 @@ class HuaXiaApp {
     const data = await this.loadArticle(category, id);
     if (!data) { alert('加载文章失败：' + id); return; }
     if (window.studyTracker) window.studyTracker.recordView(category, id, data.title);
-    document.getElementById('app').innerHTML = '<div id="reader"></div>';
-    new ArticleRenderer(data).render('reader');
+    const app = document.getElementById('app');
+    if (app) {
+      app.innerHTML = '<div id="reader"></div>';
+      new ArticleRenderer(data).render('reader');
+    }
   }
 
   async loadArticle(category, id) {
@@ -173,12 +208,15 @@ class HuaXiaApp {
       const resp = await fetch(`content/${category}/${id}.json?_=${Date.now()}`);
       if (!resp.ok) throw new Error('not found');
       return await resp.json();
-    } catch (e) { return null; }
+    } catch (e) {
+      console.error('加载文章失败', e);
+      return null;
+    }
   }
 }
 
 /**
- * 文章渲染器（终极版 - 段落必带拼音）
+ * 文章渲染器
  */
 if (typeof ArticleRenderer === 'undefined') {
 
@@ -189,6 +227,7 @@ class ArticleRenderer {
 
   render(containerId) {
     const container = document.getElementById(containerId);
+    if (!container) return;
     container.innerHTML = '';
 
     const header = document.createElement('div');
@@ -221,8 +260,10 @@ class ArticleRenderer {
     footer.innerHTML = `版本 v${this.article.version || '1.0.0'} · 更新于 ${this.article.lastUpdated || ''}<br>🌟 华夏小课堂`;
     container.appendChild(footer);
 
-    document.getElementById('r-back').onclick = () => window.app.renderCategory(window.app.currentCategory);
-    document.getElementById('play-all').onclick = () => this._playAll();
+    const rBack = document.getElementById('r-back');
+    if (rBack) rBack.onclick = () => window.app.renderCategory(window.app.currentCategory);
+    const playAll = document.getElementById('play-all');
+    if (playAll) playAll.onclick = () => this._playAll();
   }
 
   _renderBlock(block, parent) {
@@ -236,18 +277,16 @@ class ArticleRenderer {
       case 'story': {
         const line = new PinyinLine(block.text, {}, { size: 'large' });
         line.render(div);
-        div.onclick = () => window.tts && window.tts.speak(block.text);
+        div.onclick = () => window.tts && window.tts.ready && window.tts.speak(block.text);
         break;
       }
 
       case 'dialogue': {
         div.style.cssText = 'background:#e3f2fd;border-left:4px solid #2196f3;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;';
-        const speakerDiv = document.createElement('div');
-        speakerDiv.innerHTML = `<strong style="color:#1976d2;font-size:18px;">💬 ${block.speaker}：</strong>`;
-        div.appendChild(speakerDiv);
+        div.innerHTML = `<strong style="color:#1976d2;font-size:18px;">💬 ${block.speaker}：</strong>`;
         const line = new PinyinLine(block.text, {}, { size: 'large' });
         line.render(div);
-        div.onclick = () => window.tts && window.tts.speak(block.text);
+        div.onclick = () => window.tts && window.tts.ready && window.tts.speak(block.text);
         break;
       }
 
@@ -276,7 +315,7 @@ class ArticleRenderer {
           ul.appendChild(li);
         });
         div.appendChild(ul);
-        div.onclick = () => window.tts && window.tts.speak((block.items || []).join('。'));
+        div.onclick = () => window.tts && window.tts.ready && window.tts.speak((block.items || []).join('。'));
         break;
       }
 
@@ -296,7 +335,7 @@ class ArticleRenderer {
           auth.textContent = '—— ' + block.author;
           div.appendChild(auth);
         }
-        div.onclick = () => window.tts && window.tts.speak(block.content.replace(/\n/g, '。'));
+        div.onclick = () => window.tts && window.tts.ready && window.tts.speak(block.content.replace(/\n/g, '。'));
         break;
       }
 
@@ -315,7 +354,9 @@ class ArticleRenderer {
         div.appendChild(grid);
         h3.onclick = e => {
           e.stopPropagation();
-          if (window.tts) window.tts.speak((block.words || []).map(w => w.char).join(''));
+          if (window.tts && window.tts.ready) {
+            window.tts.speak((block.words || []).map(w => w.char).join(''));
+          }
         };
         break;
       }
@@ -330,7 +371,7 @@ class ArticleRenderer {
         p.style.cssText = 'font-size:18px;margin:0;color:#5d4037;';
         p.textContent = block.text;
         div.appendChild(p);
-        div.onclick = () => window.tts && window.tts.speak(block.text);
+        div.onclick = () => window.tts && window.tts.ready && window.tts.speak(block.text);
         break;
       }
     }
@@ -347,7 +388,7 @@ class ArticleRenderer {
       b.style.background = '#fff9c4';
       b.scrollIntoView({ behavior: 'smooth', block: 'center' });
       await new Promise(resolve => {
-        if (window.tts) {
+        if (window.tts && window.tts.ready) {
           window.tts.speak(text, { onEnd: resolve, rate: 0.85 });
         } else { resolve(); }
       });
@@ -358,19 +399,21 @@ class ArticleRenderer {
 }
 
 window.ArticleRenderer = ArticleRenderer;
-}  // end if (typeof ArticleRenderer === 'undefined')
+}  // end if ArticleRenderer
 
 window.HuaXiaApp = HuaXiaApp;
-console.log('✅ app.js 加载完成');
 
-// 启动
+// ✅ 关键修复：只 init 一次，防止双启动卡死
 if (!window.app) {
   window.app = new HuaXiaApp();
+  console.log('✅ app.js 加载完成');
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => window.app.init());
   } else {
-    window.app.init();
+    // 脚本在 DOM 后面加载就直接启动
+    setTimeout(() => window.app.init(), 100);
   }
 }
 
-}  // end if (typeof HuaXiaApp === 'undefined')
+}  // end if HuaXiaApp
