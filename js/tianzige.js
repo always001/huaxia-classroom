@@ -1,6 +1,7 @@
 /**
- * 田字格 + 拼音 + 声调 组件（升级版）
- * ✨ 修复：声调符号位置 + 支持大字号
+ * 田字格 + 拼音 + 声调 组件（终极修复版）
+ * ✅ 段落默认大字号 + 拼音明显显示
+ * ✅ 拼音库未加载时显示兜底
  */
 
 class TianZiGe {
@@ -13,28 +14,34 @@ class TianZiGe {
 
   render(container) {
     const word = document.createElement('div');
-    word.className = `tianzige-word ${this.size === 'large' ? 'large' : ''}`;
+    word.className = `tianzige-word ${this.size === 'large' ? 'large' : 'normal'}`;
     word.title = '点我读：' + this.char;
 
+    // ✨ 拼音行（确保一定渲染）
+    const pinyinRow = document.createElement('div');
+    pinyinRow.className = 'pinyin-row';
     if (this.pinyin) {
-      const pinyinRow = document.createElement('div');
-      pinyinRow.className = 'pinyin-row';
       const toneSpan = document.createElement('span');
-      toneSpan.className = 'tone tone-' + this.tone;
+      toneSpan.className = 'tone';
+      // 声调符号映射
+      const toneMarks = { 1: '¯', 2: '´', 3: 'ˇ', 4: '`', 5: '' };
       toneSpan.textContent = this.pinyin;
+      // 用 data 属性 + CSS 显示声调
+      toneSpan.setAttribute('data-tone-num', this.tone);
+      toneSpan.setAttribute('data-tone-mark', toneMarks[this.tone] || '');
       pinyinRow.appendChild(toneSpan);
-      word.appendChild(pinyinRow);
     } else {
-      const empty = document.createElement('div');
-      empty.className = 'pinyin-row';
-      word.appendChild(empty);
+      pinyinRow.innerHTML = '&nbsp;';
     }
+    word.appendChild(pinyinRow);
 
+    // 田字格
     const cell = document.createElement('div');
     cell.className = 'tianzige-cell';
     cell.textContent = this.char;
     word.appendChild(cell);
 
+    // 点击朗读
     word.addEventListener('click', e => {
       e.stopPropagation();
       cell.classList.add('highlight');
@@ -51,7 +58,7 @@ class PinyinLine {
   constructor(text, customPinyin = {}, options = {}) {
     this.text = text;
     this.customPinyin = customPinyin;
-    this.size = options.size || 'normal';
+    this.size = options.size || 'large';  // ✨ 默认大字号
     this.words = this._buildWords();
   }
 
@@ -75,7 +82,9 @@ class PinyinLine {
                 tone = m[2] ? parseInt(m[2]) : 5;
               }
             }
-          } catch (e) {}
+          } catch (e) {
+            console.warn('拼音转换失败:', ch, e);
+          }
         }
         words.push({ char: ch, pinyin, tone });
       } else if (/[\s，。！？、；：""''《》（）]/.test(ch)) {

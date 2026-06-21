@@ -1,33 +1,46 @@
 /**
- * 华夏小课堂 - 主应用（升级版）
- * ✨ 新增：段落拼音加大、加显示/隐藏拼音开关
+ * 华夏小课堂 - 主应用（终极版）
+ * ✅ 段落带拼音 + 声调 + 快捷功能
  */
 class HuaXiaApp {
   constructor() {
     this.currentCategory = null;
-    this.currentArticle = null;
-    this.showPinyin = true;  // 默认显示拼音
+    this.showPinyin = true;
   }
 
   async init() {
+    // 等待 TTS 就绪
     await new Promise(resolve => {
       if (window.tts.ready) resolve();
       else window.tts.onReady(() => resolve());
     });
+    // ✨ 等待拼音库加载
+    await this._waitPinyin(3000);
+
     this.renderHome();
     this.bindGlobalEvents();
-    console.log('🎉 华夏小课堂启动完成（升级版）');
+    console.log('🎉 华夏小课堂启动完成（终极版）');
   }
 
-  /** 全局事件：拼音开关 */
+  /** 等拼音库加载，最多等 N 毫秒 */
+  _waitPinyin(maxMs) {
+    return new Promise(resolve => {
+      if (window.pinyinPro) return resolve();
+      const start = Date.now();
+      const timer = setInterval(() => {
+        if (window.pinyinPro || Date.now() - start > maxMs) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 100);
+    });
+  }
+
   bindGlobalEvents() {
     document.addEventListener('keydown', e => {
-      // 按 P 键切换拼音显示
-      if (e.key === 'p' || e.key === 'P') {
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
-          this.togglePinyin();
-        }
+      if ((e.key === 'p' || e.key === 'P') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        this.togglePinyin();
       }
     });
   }
@@ -35,12 +48,10 @@ class HuaXiaApp {
   togglePinyin() {
     this.showPinyin = !this.showPinyin;
     document.body.classList.toggle('hide-pinyin', !this.showPinyin);
-    // 更新按钮文字
     const btn = document.getElementById('pinyin-toggle');
     if (btn) btn.textContent = this.showPinyin ? '👁️ 隐藏拼音' : '👁️‍🗨️ 显示拼音';
   }
 
-  /** 首页 */
   renderHome() {
     const root = document.getElementById('app');
     root.innerHTML = `
@@ -50,7 +61,6 @@ class HuaXiaApp {
         <button class="welcome-btn" id="welcome-btn">🔊 点我听介绍</button>
       </div>
 
-      <!-- ✨ 新增：快捷功能区 -->
       <div class="quick-actions">
         <button class="qa-btn" onclick="app.openVideoClassroom()">📹 视频课堂</button>
         <button class="qa-btn" onclick="app.openStudyProgress()">📊 学习记录</button>
@@ -93,25 +103,16 @@ class HuaXiaApp {
     });
   }
 
-  /** 打开视频课堂 */
   openVideoClassroom() {
-    if (window.videoClassroom) {
-      window.videoClassroom.open();
-    } else {
-      alert('视频模块未加载');
-    }
+    if (window.videoClassroom) window.videoClassroom.open();
+    else alert('视频模块未加载');
   }
 
-  /** 打开学习进度 */
   openStudyProgress() {
-    if (window.studyTracker) {
-      window.studyTracker.showProgress();
-    } else {
-      alert('进度模块未加载');
-    }
+    if (window.studyTracker) window.studyTracker.showProgress();
+    else alert('进度模块未加载');
   }
 
-  /** 分类列表 */
   async renderCategory(category) {
     this.currentCategory = category;
     const root = document.getElementById('app');
@@ -123,17 +124,14 @@ class HuaXiaApp {
       </div>
       <div class="article-list" id="article-list">加载中...</div>
     `;
-
     document.getElementById('back-btn').onclick = () => this.renderHome();
 
     const articles = await this.loadCategoryIndex(category.id);
     const list = document.getElementById('article-list');
-
     if (!articles || articles.length === 0) {
-      list.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">📦 该分类下还没有内容，敬请期待～</p>';
+      list.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">📦 该分类下还没有内容</p>';
       return;
     }
-
     list.innerHTML = '';
     articles.forEach(a => {
       const card = document.createElement('div');
@@ -161,29 +159,15 @@ class HuaXiaApp {
   }
 
   _builtinIndex(category) {
-    const builtin = {
-      festivals: [{ id: 'duanwu', title: '端午节', icon: '🐉', desc: '屈原与粽子的故事' }],
-      heroes: [], idioms: [], poems: [], inventions: [], food: []
-    };
-    return builtin[category] || [];
+    return { festivals: [{ id: 'duanwu', title: '端午节', icon: '🐉', desc: '屈原与粽子' }] }[category] || [];
   }
 
-  /** 打开文章 */
   async openArticle(category, id) {
     const data = await this.loadArticle(category, id);
-    if (!data) {
-      alert('加载文章失败：' + id);
-      return;
-    }
-    this.currentArticle = { category, id, data };
-
-    // 记录学习进度
-    if (window.studyTracker) {
-      window.studyTracker.recordView(category, id, data.title);
-    }
-
+    if (!data) { alert('加载文章失败：' + id); return; }
+    if (window.studyTracker) window.studyTracker.recordView(category, id, data.title);
     document.getElementById('app').innerHTML = '<div id="reader"></div>';
-    new ArticleRenderer(data, this.showPinyin).render('reader');
+    new ArticleRenderer(data).render('reader');
   }
 
   async loadArticle(category, id) {
@@ -191,20 +175,16 @@ class HuaXiaApp {
       const resp = await fetch(`content/${category}/${id}.json?_=${Date.now()}`);
       if (!resp.ok) throw new Error('not found');
       return await resp.json();
-    } catch (e) {
-      console.warn('加载文章失败', e);
-      return null;
-    }
+    } catch (e) { return null; }
   }
 }
 
 /**
- * 文章渲染器（升级版：段落加大拼音）
+ * 文章渲染器（终极版 - 段落必带拼音）
  */
 class ArticleRenderer {
-  constructor(article, showPinyin = true) {
+  constructor(article) {
     this.article = article;
-    this.showPinyin = showPinyin;
   }
 
   render(containerId) {
@@ -228,11 +208,11 @@ class ArticleRenderer {
     // 封面
     const cover = document.createElement('div');
     cover.className = 'block block-image';
-    cover.style.background = 'linear-gradient(135deg, #ffeaa7, #fab1a0)';
+    cover.style.cssText = 'text-align:center;background:linear-gradient(135deg, #ffeaa7, #fab1a0);border-radius:14px;padding:30px;margin-bottom:20px;';
     cover.innerHTML = `
-      <div class="emoji-big">${this.article.coverIcon || '📖'}</div>
-      <div class="caption" style="font-size:18px;color:#c0392b;font-weight:bold;">${this.article.title}</div>
-      <div class="caption" style="margin-top:6px;">— ${this.article.subtitle || ''} —</div>
+      <div style="font-size:100px;">${this.article.coverIcon || '📖'}</div>
+      <div style="font-size:20px;color:#c0392b;font-weight:bold;margin-top:10px;">${this.article.title}</div>
+      <div style="color:#666;margin-top:6px;">— ${this.article.subtitle || ''} —</div>
     `;
     main.appendChild(cover);
 
@@ -242,11 +222,10 @@ class ArticleRenderer {
 
     // 底部
     const footer = document.createElement('div');
-    footer.className = 'article-footer';
-    footer.innerHTML = `版本 v${this.article.version || '1.0.0'} · 更新于 ${this.article.lastUpdated || ''}<br>🌟 华夏小课堂 · 让世界听见中国`;
+    footer.style.cssText = 'text-align:center;padding:30px;color:#888;font-size:12px;';
+    footer.innerHTML = `版本 v${this.article.version || '1.0.0'} · 更新于 ${this.article.lastUpdated || ''}<br>🌟 华夏小课堂`;
     container.appendChild(footer);
 
-    // 绑定事件
     document.getElementById('r-back').onclick = () => window.app.renderCategory(window.app.currentCategory);
     document.getElementById('play-all').onclick = () => this._playAll();
   }
@@ -260,7 +239,7 @@ class ArticleRenderer {
     switch (block.type) {
       case 'paragraph':
       case 'story': {
-        // ✨ 升级：用大字号田字格样式
+        // ✨ 段落：大字号 + 必带拼音
         const line = new PinyinLine(block.text, {}, { size: 'large' });
         line.render(div);
         div.onclick = () => window.tts.speak(block.text);
@@ -268,9 +247,10 @@ class ArticleRenderer {
       }
 
       case 'dialogue': {
-        div.style.background = '#e3f2fd';
-        div.style.borderLeft = '4px solid #2196f3';
-        div.innerHTML = `<strong style="color:#1976d2;">💬 ${block.speaker}：</strong>`;
+        div.style.cssText = 'background:#e3f2fd;border-left:4px solid #2196f3;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;';
+        const speakerDiv = document.createElement('div');
+        speakerDiv.innerHTML = `<strong style="color:#1976d2;font-size:18px;">💬 ${block.speaker}：</strong>`;
+        div.appendChild(speakerDiv);
         const line = new PinyinLine(block.text, {}, { size: 'large' });
         line.render(div);
         div.onclick = () => window.tts.speak(block.text);
@@ -279,36 +259,47 @@ class ArticleRenderer {
 
       case 'image': {
         div.classList.add('block-image');
-        div.style.cursor = 'default';
-        div.innerHTML = `
-          <div class="emoji-big">${block.icon || '🎨'}</div>
-          <div class="caption">${block.caption || ''}</div>
-        `;
+        div.style.cssText = 'text-align:center;background:transparent;box-shadow:none;padding:20px;';
         div.onclick = null;
+        div.innerHTML = `
+          <div style="font-size:100px;">${block.icon || '🎨'}</div>
+          <div style="color:#666;font-style:italic;margin-top:8px;">${block.caption || ''}</div>
+        `;
         break;
       }
 
       case 'knowledge': {
-        div.innerHTML = `<h3>${block.title || '📚 文化小知识'}</h3><ul></ul>`;
-        const ul = div.querySelector('ul');
+        div.style.cssText = 'background:#fff3e0;border-left:4px solid #ff9800;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;';
+        const h3 = document.createElement('h3');
+        h3.style.cssText = 'color:#e65100;margin:0 0 12px;';
+        h3.textContent = block.title || '📚 文化小知识';
+        div.appendChild(h3);
+        const ul = document.createElement('ul');
+        ul.style.cssText = 'margin:0;padding-left:20px;';
         (block.items || []).forEach(item => {
           const li = document.createElement('li');
+          li.style.cssText = 'margin:8px 0;line-height:1.7;font-size:16px;';
           li.innerHTML = item;
           ul.appendChild(li);
         });
+        div.appendChild(ul);
         div.onclick = () => window.tts.speak((block.items || []).join('。'));
         break;
       }
 
       case 'poem': {
-        div.innerHTML = `<h3>📜 ${block.title || '古诗欣赏'}</h3>`;
+        div.style.cssText = 'background:#f3e5f5;border-left:4px solid #9c27b0;border-radius:14px;padding:20px;margin:16px 0;cursor:pointer;';
+        const h3 = document.createElement('h3');
+        h3.style.cssText = 'color:#6a1b9a;margin:0 0 16px;';
+        h3.textContent = '📜 ' + (block.title || '古诗欣赏');
+        div.appendChild(h3);
         const pre = document.createElement('div');
-        pre.className = 'poem-content';
+        pre.style.cssText = 'font-family:KaiTi,楷体,serif;font-size:24px;line-height:2.2;color:#4a148c;white-space:pre-wrap;text-align:center;';
         pre.textContent = block.content;
         div.appendChild(pre);
         if (block.author) {
           const auth = document.createElement('div');
-          auth.className = 'poem-author';
+          auth.style.cssText = 'text-align:right;color:#888;font-style:italic;margin-top:12px;';
           auth.textContent = '—— ' + block.author;
           div.appendChild(auth);
         }
@@ -318,15 +309,20 @@ class ArticleRenderer {
 
       case 'vocabulary': {
         div.className = 'block block-vocabulary';
-        div.innerHTML = `<h3>✏️ ${block.title || '生字乐园'}（点字听音）</h3>`;
+        div.style.cssText = 'background:#e8f5e9;border-left:4px solid #4caf50;border-radius:14px;padding:20px;margin:16px 0;';
+        const h3 = document.createElement('h3');
+        h3.style.cssText = 'color:#2e7d32;margin:0 0 16px;cursor:pointer;';
+        h3.textContent = '✏️ ' + (block.title || '生字乐园（点字听音）');
+        div.appendChild(h3);
         const grid = document.createElement('div');
         grid.className = 'vocab-grid';
+        grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;justify-content:center;';
         (block.words || []).forEach(w => {
-          const tzg = new TianZiGe(w.char, w.pinyin, w.tone);
+          const tzg = new TianZiGe(w.char, w.pinyin, w.tone, { size: 'normal' });
           tzg.render(grid);
         });
         div.appendChild(grid);
-        div.querySelector('h3').onclick = e => {
+        h3.onclick = e => {
           e.stopPropagation();
           window.tts.speak((block.words || []).map(w => w.char).join(''));
         };
@@ -334,7 +330,15 @@ class ArticleRenderer {
       }
 
       case 'question': {
-        div.innerHTML = `<strong>🤔 想一想：</strong><p>${block.text}</p>`;
+        div.style.cssText = 'background:#fffde7;border-left:4px solid #fbc02d;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;';
+        const strong = document.createElement('strong');
+        strong.style.cssText = 'color:#f57f17;display:block;margin-bottom:8px;';
+        strong.textContent = '🤔 想一想：';
+        div.appendChild(strong);
+        const p = document.createElement('p');
+        p.style.cssText = 'font-size:18px;margin:0;color:#5d4037;';
+        p.textContent = block.text;
+        div.appendChild(p);
         div.onclick = () => window.tts.speak(block.text);
         break;
       }
