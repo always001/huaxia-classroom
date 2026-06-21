@@ -5,12 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>华夏小课堂 - 小学生中华文化学习</title>
 
-  <!-- 拼音库：把中文转成拼音+声调 -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/dist/index.js"></script> -->
-  <!-- <script src="https://unpkg.com/pinyin-pro@3.18.0/dist/index.js"></script> -->
+  <!-- ✅ 修复：用 bootcdn 国内稳定 -->
   <script src="https://cdn.bootcdn.net/ajax/libs/pinyin-pro/3.18.0/index.js"></script>
-
-
 
   <style>
     * { box-sizing: border-box; }
@@ -21,7 +17,7 @@
       min-height: 100vh;
     }
 
-    /* 首页头部 */
+    /* 首页 */
     .home-header {
       background: linear-gradient(135deg, #c0392b, #8e24aa);
       color: white;
@@ -34,11 +30,7 @@
       font-size: 38px;
       letter-spacing: 4px;
     }
-    .home-header p {
-      margin: 12px 0 0;
-      opacity: 0.95;
-      font-size: 16px;
-    }
+    .home-header p { margin: 12px 0 0; opacity: 0.95; }
     .welcome-btn {
       margin-top: 20px;
       background: rgba(255,255,255,0.2);
@@ -48,11 +40,22 @@
       border-radius: 24px;
       cursor: pointer;
       font-size: 16px;
-      transition: all 0.2s;
     }
-    .welcome-btn:hover { background: rgba(255,255,255,0.35); }
 
-    /* 分类卡片 */
+    /* 快捷功能 */
+    .quick-actions {
+      max-width: 800px; margin: -10px auto 0; padding: 0 20px;
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+    .qa-btn {
+      background: white; color: #5e35b1; border: 2px solid #7e57c2;
+      padding: 10px 20px; border-radius: 24px; cursor: pointer;
+      font-size: 14px; font-weight: bold;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .qa-btn:hover { background: #7e57c2; color: white; }
+
+    /* 分类 */
     .categories {
       padding: 24px;
       max-width: 900px;
@@ -63,19 +66,14 @@
       gap: 16px;
     }
     .category-card {
-      width: 170px;
-      height: 170px;
-      color: white;
-      border-radius: 18px;
-      text-align: center;
-      padding: 20px 12px;
+      width: 170px; height: 170px;
+      color: white; border-radius: 18px;
+      text-align: center; padding: 20px 12px;
       cursor: pointer;
       box-shadow: 0 6px 16px rgba(0,0,0,0.15);
       transition: transform 0.2s;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
     }
     .category-card:hover { transform: translateY(-6px); }
     .category-card .icon { font-size: 56px; }
@@ -86,81 +84,47 @@
     .list-header {
       background: white;
       padding: 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      display: flex; align-items: center; gap: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      position: sticky;
-      top: 0;
-      z-index: 50;
+      position: sticky; top: 0; z-index: 50;
     }
     .back-btn {
-      background: #f0f0f0;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
+      background: #f0f0f0; border: none; padding: 8px 16px;
+      border-radius: 8px; cursor: pointer; font-size: 14px;
     }
-    .back-btn:hover { background: #e0e0e0; }
     .list-header h2 { margin: 0; flex: 1; font-size: 20px; }
 
     .article-list {
-      max-width: 700px;
-      margin: 20px auto;
-      padding: 0 16px;
+      max-width: 700px; margin: 20px auto; padding: 0 16px;
     }
     .article-item {
-      background: white;
-      padding: 18px;
-      margin: 14px 0;
+      background: white; padding: 18px; margin: 14px 0;
       border-radius: 14px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      transition: transform 0.2s;
+      display: flex; align-items: center; gap: 18px;
     }
     .article-item:hover { transform: translateX(4px); }
     .article-item .icon { font-size: 48px; }
     .article-item h3 { margin: 0 0 4px; color: #333; }
     .article-item p { margin: 0; color: #888; font-size: 13px; }
 
-    /* 文章阅读页 */
+    /* 阅读页 */
     .reader-header {
-      position: sticky;
-      top: 0;
+      position: sticky; top: 0;
       background: linear-gradient(135deg, #e74c3c, #c0392b);
-      color: white;
-      padding: 14px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      color: white; padding: 14px 20px;
+      display: flex; justify-content: space-between; align-items: center;
       z-index: 100;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    .reader-header h1 {
-      margin: 0;
-      font-size: 18px;
-      flex: 1;
-      text-align: center;
-    }
+    .reader-header h1 { margin: 0; font-size: 18px; flex: 1; text-align: center; }
     .play-all-btn {
-      background: white;
-      color: #c0392b;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 14px;
+      background: white; color: #c0392b; border: none;
+      padding: 8px 14px; border-radius: 20px;
+      cursor: pointer; font-weight: bold; font-size: 14px;
     }
-    .article-main {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 24px 16px;
-    }
+    .article-main { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
 
     /* 文章块 */
     .block {
@@ -169,102 +133,55 @@
       background: #fffaf0;
       border-radius: 14px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      cursor: pointer;
       transition: background 0.3s;
     }
-    .block:hover { background: #fff5d6; }
-    .block-paragraph, .block-story, .block-dialogue, .block-knowledge, .block-poem {
+    .block-paragraph, .block-story, .block-dialogue,
+    .block-knowledge, .block-poem, .block-question {
       cursor: pointer;
     }
+    .block-paragraph:hover, .block-story:hover, .block-dialogue:hover { background: #fff5d6; }
+
     .block-image {
-      background: transparent;
-      box-shadow: none;
+      background: transparent !important;
+      box-shadow: none !important;
       text-align: center;
       cursor: default;
     }
-    .block-image .emoji-big {
-      font-size: 100px;
-      display: block;
-      margin: 16px 0;
-    }
-    .block-image .caption {
-      color: #666;
-      font-style: italic;
-      font-size: 14px;
-    }
 
-    .block-knowledge {
-      background: #fff3e0;
-      border-left: 4px solid #ff9800;
-    }
-    .block-knowledge h3 {
-      color: #e65100;
-      margin: 0 0 12px;
-    }
-    .block-knowledge ul {
-      margin: 0;
-      padding-left: 20px;
-    }
-    .block-knowledge li {
-      margin: 8px 0;
-      line-height: 1.7;
-    }
+    .block-knowledge { background: #fff3e0; border-left: 4px solid #ff9800; }
+    .block-knowledge h3 { color: #e65100; margin: 0 0 12px; }
+    .block-knowledge ul { margin: 0; padding-left: 20px; }
+    .block-knowledge li { margin: 8px 0; line-height: 1.7; }
 
-    .block-poem {
-      background: #f3e5f5;
-      border-left: 4px solid #9c27b0;
-    }
-    .block-poem h3 {
-      color: #6a1b9a;
-      margin: 0 0 12px;
-    }
-    .block-poem .poem-content {
+    .block-poem { background: #f3e5f5; border-left: 4px solid #9c27b0; }
+    .block-poem h3 { color: #6a1b9a; margin: 0 0 12px; }
+    .poem-content {
       font-family: "KaiTi", "楷体", serif;
       font-size: 22px;
       line-height: 2;
       color: #4a148c;
       white-space: pre-wrap;
     }
-    .block-poem .poem-author {
-      text-align: right;
-      color: #888;
-      font-style: italic;
-      margin-top: 10px;
-      font-size: 14px;
-    }
+    .poem-author { text-align: right; color: #888; font-style: italic; margin-top: 10px; }
 
-    .block-vocabulary {
-      background: #e8f5e9;
-      border-left: 4px solid #4caf50;
-    }
-    .block-vocabulary h3 {
-      color: #2e7d32;
-      margin: 0 0 16px;
-      cursor: pointer;
-    }
-    .vocab-grid {
+    .block-vocabulary { background: #e8f5e9; border-left: 4px solid #4caf50; }
+    .block-vocabulary h3 { color: #2e7d32; margin: 0 0 16px; cursor: pointer; }
+    .vocab-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+    .block-question { background: #fffde7; border-left: 4px solid #fbc02d; }
+    .block-question strong { color: #f57f17; display: block; margin-bottom: 8px; }
+    .block-question p { font-size: 18px; margin: 0; color: #5d4037; }
+
+    /* ✨ 田字格核心样式（终极版） */
+    .pinyin-line {
+      line-height: 1.4;
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
+      align-items: flex-end;
+      margin: 12px 0;
+      padding: 8px 0;
     }
 
-    .block-question {
-      background: #fffde7;
-      border-left: 4px solid #fbc02d;
-    }
-    .block-question strong {
-      color: #f57f17;
-      display: block;
-      margin-bottom: 8px;
-    }
-    .block-question p {
-      font-size: 18px;
-      margin: 0;
-      color: #5d4037;
-    }
-
-    /* 田字格 */
     .tianzige-word {
       display: inline-flex;
       flex-direction: column;
@@ -274,24 +191,34 @@
       cursor: pointer;
       user-select: none;
     }
+
     .tianzige-word .pinyin-row {
       height: 24px;
+      min-height: 24px;
       font-size: 15px;
       color: #e74c3c;
-      font-family: "Times New Roman", serif;
+      font-family: "Times New Roman", "Arial", serif;
       letter-spacing: 1px;
       position: relative;
+      line-height: 24px;
+      visibility: visible !important;
+      display: block !important;
     }
     .tianzige-word .pinyin-row .tone {
       display: inline-block;
+      position: relative;
+      padding-right: 2px;
     }
     .tianzige-word .pinyin-row .tone::after {
-      content: attr(data-tone);
+      content: attr(data-tone-mark);
       position: absolute;
-      top: -10px;
-      right: -7px;
+      top: -8px;
+      right: -4px;
       font-size: 12px;
+      color: #e74c3c;
+      font-weight: bold;
     }
+
     .tianzige-cell {
       width: 60px;
       height: 60px;
@@ -302,22 +229,16 @@
       align-items: center;
       justify-content: center;
       font-size: 40px;
-      font-family: "KaiTi", "楷体", "STKaiti", serif;
+      font-family: "KaiTi", "STKaiti", "楷体", serif;
       color: #2c3e50;
       transition: all 0.2s;
     }
     .tianzige-cell::before {
-      content: "";
-      position: absolute;
-      left: 0; right: 0;
-      top: 50%;
+      content: ""; position: absolute; left: 0; right: 0; top: 50%;
       border-top: 1.5px dashed #e67e22;
     }
     .tianzige-cell::after {
-      content: "";
-      position: absolute;
-      top: 0; bottom: 0;
-      left: 50%;
+      content: ""; position: absolute; top: 0; bottom: 0; left: 50%;
       border-left: 1.5px dashed #e67e22;
     }
     .tianzige-cell.highlight {
@@ -329,25 +250,33 @@
       50% { transform: scale(1.12); }
     }
 
-    /* 标点 */
+    /* ✨ 大字号 - 段落使用 */
+    .tianzige-word.large { margin: 6px 8px; }
+    .tianzige-word.large .pinyin-row {
+      height: 32px;
+      min-height: 32px;
+      font-size: 20px;
+      line-height: 32px;
+    }
+    .tianzige-word.large .pinyin-row .tone::after {
+      top: -10px; right: -6px; font-size: 15px;
+    }
+    .tianzige-word.large .tianzige-cell {
+      width: 80px; height: 80px; font-size: 52px;
+    }
+
     .punct {
-      font-size: 24px;
-      margin: 0 2px;
+      font-size: 28px;
+      margin: 0 4px;
       color: #555;
       display: inline-block;
       align-self: center;
+      font-family: "KaiTi", "STKaiti", "楷体", serif;
     }
 
-    /* 拼音行容器 */
-    .pinyin-line {
-      line-height: 1.2;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      margin: 4px 0;
-    }
+    /* 隐藏拼音模式 */
+    body.hide-pinyin .pinyin-row { display: none !important; }
 
-    /* 文章底部 */
     .article-footer {
       text-align: center;
       padding: 30px 20px;
@@ -355,7 +284,6 @@
       font-size: 12px;
     }
 
-    /* TTS状态提示 */
     .tts-status {
       position: fixed;
       bottom: 20px;
@@ -367,176 +295,18 @@
       font-size: 13px;
       z-index: 1000;
     }
-    
   </style>
-  
-  <style>
-  /* ✨ 新增：快捷功能区 */
-  .quick-actions {
-    max-width: 800px; margin: -10px auto 0; padding: 0 20px;
-    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
-  }
-  .qa-btn {
-    background: white; color: #5e35b1; border: 2px solid #7e57c2;
-    padding: 10px 20px; border-radius: 24px; cursor: pointer;
-    font-size: 14px; font-weight: bold;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    transition: all 0.2s;
-  }
-  .qa-btn:hover {
-    background: #7e57c2; color: white; transform: translateY(-2px);
-  }
-
-  /* ✨ 新增：拼音显示/隐藏 */
-  body.hide-pinyin .pinyin-row { display: none !important; }
-
-  /* ✨ 新增：大字号田字格 */
-  .tianzige-word.large { margin: 6px 8px; }
-  .tianzige-word.large .pinyin-row { height: 28px; font-size: 18px; }
-  .tianzige-word.large .tianzige-cell {
-    width: 76px; height: 76px; font-size: 48px;
-  }
-  .tianzige-word.large .pinyin-row .tone::after {
-    top: -12px; right: -8px; font-size: 14px;
-  }
-</style>
-
-<style>
-  /* ✨ 终极版段落拼音样式 */
-  .pinyin-line {
-    line-height: 1.4;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    margin: 12px 0;
-    padding: 8px 0;
-  }
-
-  .tianzige-word {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 4px 6px;
-    vertical-align: bottom;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .tianzige-word .pinyin-row {
-    height: 24px;
-    font-size: 15px;
-    color: #e74c3c;
-    font-family: "Times New Roman", "Arial", serif;
-    letter-spacing: 1px;
-    position: relative;
-    min-height: 24px;
-    line-height: 24px;
-    visibility: visible !important;
-  }
-
-  .tianzige-word .pinyin-row .tone {
-    display: inline-block;
-    position: relative;
-    padding-right: 2px;
-  }
-
-  /* ✨ 声调符号 - 用 ::after 渲染 */
-  .tianzige-word .pinyin-row .tone::after {
-    content: attr(data-tone-mark);
-    position: absolute;
-    top: -8px;
-    right: -4px;
-    font-size: 12px;
-    color: #e74c3c;
-    font-weight: bold;
-  }
-
-  .tianzige-cell {
-    width: 60px;
-    height: 60px;
-    border: 2px solid #333;
-    position: relative;
-    background: #fffdf5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 40px;
-    font-family: "KaiTi", "STKaiti", "楷体", serif;
-    color: #2c3e50;
-    transition: all 0.2s;
-  }
-  .tianzige-cell::before {
-    content: ""; position: absolute; left: 0; right: 0; top: 50%;
-    border-top: 1.5px dashed #e67e22;
-  }
-  .tianzige-cell::after {
-    content: ""; position: absolute; top: 0; bottom: 0; left: 50%;
-    border-left: 1.5px dashed #e67e22;
-  }
-  .tianzige-cell.highlight {
-    background: #fff9c4;
-    animation: pulse 0.6s;
-  }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.12); }
-  }
-
-  /* ✨ 大字号（段落用）- 拼音更明显 */
-  .tianzige-word.large {
-    margin: 6px 8px;
-  }
-  .tianzige-word.large .pinyin-row {
-    height: 32px;
-    font-size: 20px;
-    min-height: 32px;
-    line-height: 32px;
-  }
-  .tianzige-word.large .pinyin-row .tone::after {
-    top: -10px;
-    right: -6px;
-    font-size: 15px;
-  }
-  .tianzige-word.large .tianzige-cell {
-    width: 80px;
-    height: 80px;
-    font-size: 52px;
-  }
-
-  .punct {
-    font-size: 28px;
-    margin: 0 4px;
-    color: #555;
-    display: inline-block;
-    align-self: center;
-    font-family: "KaiTi", "STKaiti", "楷体", serif;
-  }
-
-  /* 隐藏拼音模式 */
-  body.hide-pinyin .pinyin-row { display: none !important; }
-
-  /* 段落块整体样式 */
-  .block-paragraph, .block-story, .block-dialogue {
-    padding: 16px 20px !important;
-  }
-</style>
-
 </head>
 <body>
   <div id="app">正在加载中...</div>
-  
-  <script src="js/video-classroom.js"></script>
-  <script src="js/study-tracker.js"></script>
-
   <div id="tts-status" class="tts-status" style="display:none;">🔊 朗读中...</div>
 
-  <!-- ========== 模块脚本 ========== -->
+  <!-- ✅ 注意顺序：基础先加载 -->
   <script src="js/tts-engine.js"></script>
   <script src="js/tianzige.js"></script>
   <script src="js/app.js"></script>
-  
+  <!-- 视频和学习模块放最后（防止重复定义） -->
   <script src="js/study-tracker.js"></script>
   <script src="js/video-classroom.js"></script>
-
 </body>
 </html>
