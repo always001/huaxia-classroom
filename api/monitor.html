@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>访问日志后台</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #f0f0f0; }
+    .charts { display: flex; gap: 20px; margin-top: 20px; }
+    canvas { background: #fff; padding: 10px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<h1>访问日志后台</h1>
+
+<button onclick="clearLogs()">清空日志</button>
+<button onclick="exportCSV()">导出 CSV</button>
+
+<div class="charts">
+  <canvas id="chartDay" width="400" height="200"></canvas>
+  <canvas id="chartCountry" width="400" height="200"></canvas>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>IP</th>
+      <th>国家</th>
+      <th>城市</th>
+      <th>页面</th>
+      <th>设备</th>
+      <th>时间</th>
+    </tr>
+  </thead>
+  <tbody id="log-table"></tbody>
+</table>
+
+<script>
+async function loadLogs() {
+  const logs = await fetch("https://你的-vercel-域名.vercel.app/api/logs").then(r => r.json());
+  const tbody = document.getElementById("log-table");
+  tbody.innerHTML = "";
+
+  logs.forEach(log => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${log.ip}</td>
+      <td>${log.country}</td>
+      <td>${log.city}</td>
+      <td>${log.url}</td>
+      <td>${log.ua}</td>
+      <td>${log.time}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadCharts() {
+  const stats = await fetch("https://你的-vercel-域名.vercel.app/api/stats").then(r => r.json());
+
+  new Chart(document.getElementById("chartDay"), {
+    type: "line",
+    data: {
+      labels: Object.keys(stats.byDay),
+      datasets: [{ label: "每日访问量", data: Object.values(stats.byDay) }]
+    }
+  });
+
+  new Chart(document.getElementById("chartCountry"), {
+    type: "pie",
+    data: {
+      labels: Object.keys(stats.byCountry),
+      datasets: [{ data: Object.values(stats.byCountry) }]
+    }
+  });
+}
+
+async function clearLogs() {
+  await fetch("https://你的-vercel-域名.vercel.app/api/clear");
+  loadLogs();
+}
+
+function exportCSV() {
+  window.location = "https://你的-vercel-域名.vercel.app/api/logs";
+}
+
+loadLogs();
+loadCharts();
+setInterval(loadLogs, 5000);
+</script>
+
+</body>
+</html>
