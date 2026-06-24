@@ -26,7 +26,6 @@ window.toTonedPinyin = function(pinyin, tone) {
 };
 window.getPinyinRaw = function(char) { return window.PINYIN_DATA[char] || null; };
 
-// 国家数据
 window.COUNTRIES = {
   'CN': { name: '中国', flag: '🇨🇳', x: 720, y: 280 },
   'JP': { name: '日本', flag: '🇯🇵', x: 820, y: 300 },
@@ -37,6 +36,117 @@ window.COUNTRIES = {
   'FR': { name: '法国', flag: '🇫🇷', x: 490, y: 260 },
   'AU': { name: '澳大利亚', flag: '🇦🇺', x: 830, y: 520 }
 };
+
+// ===== GitHub API 封装（聊天 + 访问记录共用）=====
+window.GH = {
+  get cfg() { return JSON.parse(localStorage.getItem('hx_gh_config') || '{}'); },
+  set cfg(v) { localStorage.setItem('hx_gh_config', JSON.stringify(v)); },
+  hasAuth() { return !!(this.cfg.user && this.cfg.token && this.cfg.chatRepo && this.cfg.visitRepo); },
+  headers() { return { 'Authorization': `token ${this.cfg.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; },
+  async chat() {
+    if (!this.hasAuth()) throw new Error('未配置 GitHub');
+    return new GitHubChat(this.cfg.user, this.cfg.token, this.cfg.chatRepo);
+  },
+  async visitor() {
+    if (!this.hasAuth()) throw new Error('未配置 GitHub');
+    return new GitHubVisitor(this.cfg.user, this.cfg.token, this.cfg.visitRepo);
+  }
+};
+
+// GitHub 聊天
+class GitHubChat {
+  constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
+  get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
+  headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
+
+  async getRoomIssue(roomId) {
+    const r = await fetch(`${this.base}/issues?labels=chat-room&state=open&per_page=100`, { headers: this.headers() });
+    if (!r.ok) throw new Error('获取房间失败');
+    const issues = await r.json();
+    let issue = issues.find(i => i.title === `[Chat] ${roomId}`);
+    if (!issue) {
+      const cr = await fetch(`${this.base}/issues`, {
+        method: 'POST', headers: this.headers(),
+        body: JSON.stringify({ title: `[Chat] ${roomId}`, body: `房间号：${roomId}\n\n此 Issue 由华夏小课堂自动创建。`, labels: ['chat-room'] })
+      });
+      if (!cr.ok) throw new Error('创建房间失败');
+      issue = await cr.json();
+    }
+    return issue;
+  }
+
+  async sendMessage(roomId, from, country, text) {
+    const issue = await this.getRoomIssue(roomId);
+    const body = `**${country} ${from}** · ${new Date().toLocaleString('zh-CN')}\n\n${text}`;
+    const r = await fetch(`${this.base}/issues/${issue.number}/comments`, {
+      method: 'POST', headers: this.headers(), body: JSON.stringify({ body })
+    });
+    if (!r.ok) throw new Error('发送失败');
+    return r.json();
+  }
+
+  async getMessages(roomId) {
+    const issue = await this.getRoomIssue(roomId);
+    const r = await fetch(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
+    if (!r.ok) throw new Error('读取失败');
+    const comments = await r.json();
+    return comments.map(c => {
+      // 解析 [国家 姓名] 内容
+      const m = c.body.match(/^\*\*([\u{1F000}-\u{1FFFF}\u{1F300}-\u{1F9FF}]*?)\s*([^*]+?)\*\*\s*·\s*([\s\S]*?)\n\n([\s\S]*)$/u);
+      if (m) return { id: c.id, from: m[2].trim(), country: m[1].trim(), time: c.created_at, text: m[4] };
+      return { id: c.id, from: c.user.login, country: '🌏', time: c.created_at, text: c.body };
+    });
+  }
+}
+
+// GitHub 访问记录
+class GitHubVisitor {
+  constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
+  get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
+  headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
+
+  async log(record) {
+    const date = new Date().toISOString().slice(0, 10);
+    const issueTitle = `访客记录 ${date}`;
+    // 查找当天 Issue
+    const r = await fetch(`${this.base}/issues?labels=visitor-log&state=open&per_page=100`, { headers: this.headers() });
+    const issues = r.ok ? await r.json() : [];
+    let issue = issues.find(i => i.title === issueTitle);
+    if (!issue) {
+      const cr = await fetch(`${this.base}/issues`, {
+        method: 'POST', headers: this.headers(),
+        body: JSON.stringify({ title: issueTitle, body: `# ${date} 访客日志\n\n由华夏小课堂自动创建`, labels: ['visitor-log'] })
+      });
+      issue = await cr.json();
+    }
+    // 添加评论
+    const body = `| 时间 | IP | 国家 | 地区 | 城市 | UA | 页面 |\n|---|---|---|---|---|---|---|\n| ${record.time} | ${record.ip} | ${record.country} | ${record.region || ''} | ${record.city || ''} | ${record.ua || ''} | ${record.page || ''} |`;
+    await fetch(`${this.base}/issues/${issue.number}/comments`, {
+      method: 'POST', headers: this.headers(), body: JSON.stringify({ body })
+    });
+  }
+
+  async getAll() {
+    const r = await fetch(`${this.base}/issues?labels=visitor-log&state=all&per_page=30`, { headers: this.headers() });
+    if (!r.ok) return [];
+    const issues = await r.json();
+    const all = [];
+    for (const issue of issues) {
+      const cr = await fetch(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
+      if (!cr.ok) continue;
+      const comments = await cr.json();
+      comments.forEach(c => {
+        // 解析表格行
+        const lines = c.body.split('\n').filter(l => l.startsWith('|') && !l.includes('---'));
+        lines.slice(1).forEach(line => {
+          const cols = line.split('|').map(c => c.trim()).filter(Boolean);
+          if (cols.length >= 5) all.push({ time: cols[0], ip: cols[1], country: cols[2], region: cols[3], city: cols[4], ua: cols[5] || '', page: cols[6] || '' });
+        });
+      });
+    }
+    return all.reverse();
+  }
+}
 </script>
 
 <style>
@@ -96,7 +206,7 @@ window.COUNTRIES = {
   .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px; }
   .modal { background: white; border-radius: 20px; padding: 24px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
   .modal h2 { color: #5e35b1; margin-bottom: 16px; }
-  .modal input, .modal textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; font-size: 14px; box-sizing: border-box; }
+  .modal input, .modal textarea, .modal select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; font-size: 14px; box-sizing: border-box; }
   .btn { width: 100%; padding: 12px; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: bold; margin-top: 6px; }
   .btn-primary { background: linear-gradient(135deg, #7e57c2, #4527a0); }
   .btn-success { background: linear-gradient(135deg, #66bb6a, #2e7d32); }
@@ -106,9 +216,8 @@ window.COUNTRIES = {
   .map-svg { width: 100%; height: 100%; }
   .country-marker { position: absolute; cursor: pointer; font-size: 36px; transition: transform 0.2s; transform: translate(-50%, -50%); }
   .country-marker:hover { transform: translate(-50%, -50%) scale(1.4); }
-  .country-tooltip { position: absolute; background: rgba(0,0,0,0.85); color: white; padding: 6px 12px; border-radius: 6px; font-size: 13px; pointer-events: none; transform: translate(-50%, -130%); white-space: nowrap; }
   .chat-window { height: 400px; display: flex; flex-direction: column; }
-  .chat-messages { flex: 1; overflow-y: auto; padding: 10px; background: #f5f5f5; border-radius: 8px; margin-bottom: 10px; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 10px; background: #f5f5f5; border-radius: 8px; margin-bottom: 10px; max-height: 300px; }
   .chat-msg { margin: 6px 0; display: flex; }
   .chat-msg.me { justify-content: flex-end; }
   .chat-msg .bubble { max-width: 70%; padding: 8px 12px; border-radius: 12px; background: white; word-break: break-word; }
@@ -118,6 +227,9 @@ window.COUNTRIES = {
   .chat-input-row { display: flex; gap: 8px; }
   .chat-input-row input { flex: 1; margin: 0; }
   .chat-input-row button { width: auto; padding: 10px 20px; }
+  .setup-panel { background: #fff3e0; border: 2px solid #ff9800; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .setup-panel h3 { color: #e65100; margin: 0 0 8px; }
+  .setup-panel p { font-size: 12px; color: #666; line-height: 1.6; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -125,7 +237,6 @@ window.COUNTRIES = {
 <div id="tts-status" class="tts-status" style="display:none;">🔊 朗读中...</div>
 
 <script>
-// ===== TTS =====
 class HuaXiaTTS {
   constructor() { this.synth = window.speechSynthesis; this.voice = null; this.ready = false; this.onReadyCallbacks = []; this.statusEl = document.getElementById('tts-status'); this._init(); }
   _init() {
@@ -138,21 +249,14 @@ class HuaXiaTTS {
   stop() { this.synth.cancel(); if (this.statusEl) this.statusEl.style.display = 'none'; }
 }
 
-// ===== 田字格 =====
 class TianZiGe {
   constructor(char, pinyin = '') { this.char = char; this.pinyin = pinyin; }
   render(container) {
     const word = document.createElement('div');
     word.className = 'tianzige-word';
     word.title = '点我读：' + this.char;
-    const py = document.createElement('div');
-    py.className = 'pinyin-text';
-    py.textContent = this.pinyin || ' ';
-    word.appendChild(py);
-    const cell = document.createElement('div');
-    cell.className = 'tianzige-cell';
-    cell.textContent = this.char;
-    word.appendChild(cell);
+    const py = document.createElement('div'); py.className = 'pinyin-text'; py.textContent = this.pinyin || ' '; word.appendChild(py);
+    const cell = document.createElement('div'); cell.className = 'tianzige-cell'; cell.textContent = this.char; word.appendChild(cell);
     word.onclick = e => { e.stopPropagation(); cell.classList.add('highlight'); setTimeout(() => cell.classList.remove('highlight'), 600); window.tts.speak(this.char); };
     container.appendChild(word);
     return word;
@@ -175,8 +279,7 @@ class PinyinLine {
     return words;
   }
   render(container) {
-    const line = document.createElement('div');
-    line.className = 'pinyin-line';
+    const line = document.createElement('div'); line.className = 'pinyin-line';
     for (const w of this.words) {
       if (w.isPunct) { const span = document.createElement('span'); span.className = 'punct'; span.textContent = w.char; line.appendChild(span); }
       else { new TianZiGe(w.char, w.pinyin).render(line); }
@@ -186,74 +289,26 @@ class PinyinLine {
   }
 }
 
-// ===== 跨境聊天（用 localStorage + 模拟房间制）=====
-// 注：真正跨境需要后端。这里用 localStorage 做"多端共享"方案：
-// 老师在一个浏览器当 host，学生在同一浏览器扫码/输入房间号加入。
-// 跨境延迟问题：可以用 GitHub Issues API 扩展（之后可选）
-const Chat = {
-  get room() { return localStorage.getItem('hx_chat_room') || ''; },
-  set room(v) { localStorage.setItem('hx_chat_room', v); },
-  get myName() { return localStorage.getItem('hx_chat_name') || ''; },
-  set myName(v) { localStorage.setItem('hx_chat_name', v); },
-  get myCountry() { return localStorage.getItem('hx_chat_country') || '🌏'; },
-  set myCountry(v) { localStorage.setItem('hx_chat_country', v); },
-  getMsgs() { try { return JSON.parse(localStorage.getItem('hx_msgs_' + this.room) || '[]'); } catch(e) { return []; } },
-  saveMsgs(msgs) { localStorage.setItem('hx_msgs_' + this.room, JSON.stringify(msgs)); },
-  send(text) {
-    if (!text.trim() || !this.room) return;
-    const msgs = this.getMsgs();
-    msgs.push({ from: this.myName, country: this.myCountry, text, time: Date.now() });
-    this.saveMsgs(msgs);
-  },
-  clear() { localStorage.removeItem('hx_msgs_' + this.room); }
-};
-
-// ===== 访问记录（用 localStorage）=====
-const Tracker = {
-  records: [],
-  init() {
-    this.records = JSON.parse(localStorage.getItem('hx_visitor_records') || '[]');
-  },
-  async log() {
-    this.init();
-    let loc = null;
-    try {
-      const r = await fetch('https://ipapi.co/json/');
-      if (r.ok) { const d = await r.json(); loc = { ip: d.ip, country: d.country_name, region: d.region, city: d.city, country_code: d.country_code }; }
-    } catch(e) {}
-    if (!loc) loc = { ip: '未知', country: '未知', region: '', city: '', country_code: 'XX' };
-    const record = { ...loc, time: new Date().toISOString(), ua: navigator.userAgent.substring(0, 50), page: location.pathname };
-    // 去重：相同 IP+30分钟内不重复记录
-    const recent = this.records.find(r => r.ip === loc.ip && Date.now() - new Date(r.time).getTime() < 30 * 60 * 1000);
-    if (!recent) {
-      this.records.push(record);
-      // 最多保留 200 条
-      if (this.records.length > 200) this.records = this.records.slice(-200);
-      localStorage.setItem('hx_visitor_records', JSON.stringify(this.records));
-    }
-    return loc;
-  },
-  getAll() { this.init(); return this.records; },
-  exportCSV() {
-    this.init();
-    const csv = '时间,IP,国家,地区,城市,UA,页面\n' + this.records.map(r => `${r.time},${r.ip},${r.country},${r.region},${r.city},${r.ua},${r.page}`).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `访问记录_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-  },
-  clear() { localStorage.removeItem('hx_visitor_records'); this.records = []; }
-};
-
-// ===== 主应用 =====
 class HuaXiaApp {
+  constructor() { this._loggedKey = 'hx_logged_' + new Date().toISOString().slice(0, 10); }
   init() { this._logVisit(); this.renderHome(); }
 
   async _logVisit() {
-    const loc = await Tracker.log();
-    // 显示位置
-    const el = document.getElementById('my-location');
-    if (el && loc) el.textContent = `🌍 ${loc.country}${loc.region ? '·' + loc.region : ''}${loc.city ? '·' + loc.city : ''}`;
+    if (sessionStorage.getItem('hx_visited_today')) return;
+    sessionStorage.setItem('hx_visited_today', '1');
+    try {
+      const r = await fetch('https://ipapi.co/json/');
+      if (!r.ok) return;
+      const d = await r.json();
+      const loc = { ip: d.ip, country: d.country_name, region: d.region, city: d.city };
+      localStorage.setItem('hx_my_loc', JSON.stringify(loc));
+      if (window.GH && window.GH.hasAuth()) {
+        try {
+          const v = await window.GH.visitor();
+          await v.log({ time: new Date().toISOString(), ip: loc.ip, country: loc.country, region: loc.region, city: loc.city, ua: navigator.userAgent.substring(0, 60), page: '/' });
+        } catch (e) { console.warn('上传访问记录失败:', e); }
+      }
+    } catch (e) {}
   }
 
   renderHome() {
@@ -263,8 +318,9 @@ class HuaXiaApp {
         <p style="margin:12px 0 0;opacity:0.95;">读中国故事 · 传中华文化</p>
         <button class="welcome-btn" id="welcome-btn">🔊 点我听介绍</button>
       </div>
-      <div style="text-align:center;padding:8px 20px;font-size:13px;color:#666;" id="my-location">🌍 正在定位...</div>
+      <div style="text-align:center;padding:8px 20px;font-size:13px;color:#666;" id="my-location">🌍 定位中...</div>
       <div class="quick-actions">
+        <button class="qa-btn" onclick="app.openSetup()">⚙️ 配置</button>
         <button class="qa-btn" onclick="app.openVideo()">📹 视频课堂</button>
         <button class="qa-btn" onclick="app.openChat()">💬 跨境聊天</button>
         <button class="qa-btn" onclick="app.openGlobe()">🌍 世界地图</button>
@@ -274,11 +330,12 @@ class HuaXiaApp {
       <div class="categories" id="categories"></div>
       <footer style="text-align:center;padding:30px;color:#888;font-size:13px;">🌟 华夏小课堂 · <a href="admin/" style="color:#5e35b1;">教师后台</a></footer>
     `;
-    document.getElementById('welcome-btn').onclick = () => {
-      if (window.tts && window.tts.ready) window.tts.speak('你好小朋友，欢迎来到华夏小课堂！');
-    };
-    // 重新定位
-    this._logVisit();
+    document.getElementById('welcome-btn').onclick = () => { if (window.tts && window.tts.ready) window.tts.speak('你好小朋友，欢迎来到华夏小课堂！'); };
+
+    // 显示位置
+    const loc = JSON.parse(localStorage.getItem('hx_my_loc') || 'null');
+    const locEl = document.getElementById('my-location');
+    if (locEl) locEl.textContent = loc ? `🌍 ${loc.country}${loc.region ? '·' + loc.region : ''}${loc.city ? '·' + loc.city : ''}` : '🌍 定位中...';
 
     const cats = [
       { id: 'festivals', name: '传统节日', icon: '🎊', color: '#e74c3c' },
@@ -299,27 +356,192 @@ class HuaXiaApp {
     });
   }
 
-  togglePinyin() {
-    const isHidden = document.body.classList.toggle('hide-pinyin');
-    const btn = document.getElementById('pinyin-toggle');
-    if (btn) btn.textContent = isHidden ? '👁️‍🗨️ 显示拼音' : '👁️ 隐藏拼音';
+  togglePinyin() { const isHidden = document.body.classList.toggle('hide-pinyin'); const btn = document.getElementById('pinyin-toggle'); if (btn) btn.textContent = isHidden ? '👁️‍🗨️ 显示拼音' : '👁️ 隐藏拼音'; }
+
+  // ⚙️ GitHub 配置面板
+  openSetup() {
+    const cfg = window.GH.cfg;
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.onclick = e => { if (e.target === ov) ov.remove(); };
+    ov.innerHTML = `
+      <div class="modal" style="max-width:560px;">
+        <h2>⚙️ GitHub 配置</h2>
+        <div class="setup-panel">
+          <h3>💡 为什么要配置？</h3>
+          <p>配置 GitHub 后，您的网站就能：<br>
+          ✓ 💬 跨境聊天（不同国家学生实时聊天）<br>
+          ✓ 📊 上传访问记录（看访问者 IP 和位置）<br>
+          ✓ 🔒 数据存在您自己的私有仓库，永久免费</p>
+        </div>
+        <p style="font-size:13px;color:#666;margin-bottom:8px;">请输入您的 GitHub 信息（<strong>只存在您浏览器本地</strong>，不会上传）：</p>
+        <input id="cfg-user" placeholder="GitHub 用户名（如 always001）" value="${cfg.user || ''}">
+        <input id="cfg-token" type="password" placeholder="Personal Access Token (ghp_...)" value="${cfg.token || ''}">
+        <input id="cfg-chat-repo" placeholder="聊天仓库名（如 hx-chat-data）" value="${cfg.chatRepo || 'hx-chat-data'}">
+        <input id="cfg-visit-repo" placeholder="访问记录仓库名（如 hx-visitor-data）" value="${cfg.visitRepo || 'hx-visitor-data'}">
+        <button class="btn btn-primary" id="cfg-save">💾 保存配置</button>
+        <button class="btn btn-success" id="cfg-test">🧪 测试连接</button>
+        <button class="btn btn-secondary" id="cfg-close">关闭</button>
+        <p id="cfg-msg" style="margin-top:10px;font-size:13px;"></p>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    document.getElementById('cfg-close').onclick = () => ov.remove();
+    document.getElementById('cfg-save').onclick = () => {
+      window.GH.cfg = {
+        user: document.getElementById('cfg-user').value.trim(),
+        token: document.getElementById('cfg-token').value.trim(),
+        chatRepo: document.getElementById('cfg-chat-repo').value.trim() || 'hx-chat-data',
+        visitRepo: document.getElementById('cfg-visit-repo').value.trim() || 'hx-visitor-data'
+      };
+      document.getElementById('cfg-msg').innerHTML = '✅ 配置已保存（仅存浏览器本地）';
+    };
+    document.getElementById('cfg-test').onclick = async () => {
+      window.GH.cfg = {
+        user: document.getElementById('cfg-user').value.trim(),
+        token: document.getElementById('cfg-token').value.trim(),
+        chatRepo: document.getElementById('cfg-chat-repo').value.trim() || 'hx-chat-data',
+        visitRepo: document.getElementById('cfg-visit-repo').value.trim() || 'hx-visitor-data'
+      };
+      const msg = document.getElementById('cfg-msg');
+      msg.innerHTML = '🧪 测试中...';
+      try {
+        const chat = await window.GH.chat();
+        await chat.getRoomIssue('test-room-' + Date.now());
+        msg.innerHTML = '✅ 连接成功！跨境聊天可用';
+      } catch (e) {
+        msg.innerHTML = '❌ 连接失败：' + e.message;
+      }
+    };
   }
+
+  // 💬 跨境聊天（GitHub 版）
+  openChat() {
+    if (!window.GH.hasAuth()) {
+      if (confirm('请先配置 GitHub Token 才能使用跨境聊天。\n是否现在配置？')) this.openSetup();
+      return;
+    }
+    const myName = localStorage.getItem('hx_chat_name') || '';
+    const myCountry = localStorage.getItem('hx_chat_country') || '🇨🇳';
+    const myRoom = localStorage.getItem('hx_chat_room') || '';
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.onclick = e => { if (e.target === ov) ov.remove(); };
+    ov.innerHTML = `
+      <div class="modal" style="max-width:560px;">
+        <h2>💬 跨境聊天</h2>
+        <p style="color:#666;font-size:13px;margin-bottom:12px;">基于 GitHub Issues，0 成本、跨境、永久。</p>
+        <input id="ch-name" placeholder="您的姓名" value="${myName}">
+        <input id="ch-room" placeholder="房间号（如 duanwu-2024）" value="${myRoom}">
+        <select id="ch-country">
+          <option value="🇨🇳">🇨🇳 中国</option>
+          <option value="🇯🇵">🇯🇵 日本</option>
+          <option value="🇰🇷">🇰🇷 韩国</option>
+          <option value="🇸🇬">🇸🇬 新加坡</option>
+          <option value="🇺🇸">🇺🇸 美国</option>
+          <option value="🇬🇧">🇬🇧 英国</option>
+          <option value="🇫🇷">🇫🇷 法国</option>
+          <option value="🇦🇺">🇦🇺 澳大利亚</option>
+        </select>
+        <button class="btn btn-primary" id="ch-enter">进入</button>
+        <button class="btn btn-secondary" id="ch-close">关闭</button>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    document.getElementById('ch-country').value = myCountry;
+    document.getElementById('ch-close').onclick = () => ov.remove();
+    document.getElementById('ch-enter').onclick = () => {
+      const name = document.getElementById('ch-name').value.trim();
+      const room = document.getElementById('ch-room').value.trim();
+      const country = document.getElementById('ch-country').value;
+      if (!name || !room) return alert('请填写姓名和房间号');
+      localStorage.setItem('hx_chat_name', name);
+      localStorage.setItem('hx_chat_room', room);
+      localStorage.setItem('hx_chat_country', country);
+      ov.remove();
+      this._openChatRoom(name, country, room);
+    };
+  }
+
+  _openChatRoom(name, country, room) {
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.onclick = e => { if (e.target === ov) ov.remove(); };
+    ov.innerHTML = `
+      <div class="modal" style="max-width:560px;">
+        <h2>💬 ${room} <span style="font-size:13px;color:#888;">跨境</span></h2>
+        <p style="font-size:12px;color:#888;margin-bottom:8px;">您是 <strong>${country} ${name}</strong> · <a href="#" id="ch-leave" style="color:#c62828;">换房间</a></p>
+        <div class="chat-window">
+          <div class="chat-messages" id="chat-msgs">加载中...</div>
+          <div class="chat-input-row">
+            <input id="ch-input" placeholder="输入消息，回车发送">
+            <button class="btn btn-primary" id="ch-send">发送</button>
+          </div>
+        </div>
+        <button class="btn btn-secondary" id="ch-close" style="margin-top:10px;">关闭</button>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    document.getElementById('ch-close').onclick = () => ov.remove();
+    document.getElementById('ch-leave').onclick = e => { e.preventDefault(); ov.remove(); this.openChat(); };
+
+    const send = async () => {
+      const input = document.getElementById('ch-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      input.disabled = true;
+      try {
+        const chat = await window.GH.chat();
+        await chat.sendMessage(room, name, country, text);
+        await this._renderChatMessages(room, name);
+      } catch (e) {
+        alert('发送失败：' + e.message);
+      } finally {
+        input.disabled = false;
+        input.focus();
+      }
+    };
+    document.getElementById('ch-send').onclick = send;
+    document.getElementById('ch-input').onkeypress = e => { if (e.key === 'Enter') send(); };
+
+    this._renderChatMessages(room, name);
+    this._chatTimer = setInterval(() => this._renderChatMessages(room, name), 3000);
+    ov._timer = this._chatTimer;
+    ov.addEventListener('DOMNodeRemoved', () => { if (this._chatTimer) clearInterval(this._chatTimer); });
+  }
+
+  async _renderChatMessages(room, myName) {
+    const cont = document.getElementById('chat-msgs');
+    if (!cont) return;
+    try {
+      const chat = await window.GH.chat();
+      const msgs = await chat.getMessages(room);
+      cont.innerHTML = msgs.map(m => {
+        const isMe = m.from === myName;
+        const time = new Date(m.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        return `<div class="chat-msg ${isMe ? 'me' : ''}">
+          <div>
+            ${!isMe ? `<div class="name">${m.country} ${m.from}</div>` : ''}
+            <div class="bubble">${this._esc(m.text)}</div>
+            <div class="time">${time}</div>
+          </div>
+        </div>`;
+      }).join('') || '<p style="text-align:center;color:#999;">还没有消息，发第一条吧～</p>';
+      cont.scrollTop = cont.scrollHeight;
+    } catch (e) {
+      cont.innerHTML = `<p style="color:#c62828;text-align:center;">加载失败：${e.message}</p>`;
+    }
+  }
+
+  _esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   // 🌍 世界地图
   openGlobe() {
     const ov = document.createElement('div');
     ov.className = 'modal-overlay';
     ov.onclick = e => { if (e.target === ov) ov.remove(); };
-    ov.innerHTML = `
-      <div style="background:white;border-radius:20px;padding:20px;max-width:1100px;width:100%;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <h2 style="color:#5e35b1;margin:0;">🌍 世界地图</h2>
-          <button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">×</button>
-        </div>
-        <div class="map-container" id="map"></div>
-        <div id="country-info" style="margin-top:16px;"></div>
-      </div>
-    `;
+    ov.innerHTML = `<div style="background:white;border-radius:20px;padding:20px;max-width:1100px;width:100%;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h2 style="color:#5e35b1;margin:0;">🌍 世界地图</h2><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">×</button></div><div class="map-container" id="map"></div><div id="country-info" style="margin-top:16px;"></div></div>`;
     document.body.appendChild(ov);
     this._renderMap();
   }
@@ -335,137 +557,12 @@ class HuaXiaApp {
       m.style.left = (c.x / w * 100) + '%';
       m.style.top = (c.y / h * 100) + '%';
       m.title = c.name;
-      m.onclick = () => this._showCountryInfo(code);
+      m.onclick = () => {
+        document.getElementById('country-info').innerHTML = `<div style="background:#ede7f6;padding:16px;border-radius:12px;"><h3 style="margin:0;color:#5e35b1;">${c.flag} ${c.name}</h3><p style="color:#666;margin:8px 0;">点击下方按钮，进入此国家的聊天房间：</p><button class="btn btn-success" onclick="localStorage.setItem('hx_chat_room','world-${code}');localStorage.setItem('hx_chat_country','${c.flag}');app.openChat();" style="max-width:300px;">💬 进入 ${c.name} 房间</button></div>`;
+      };
       map.appendChild(m);
     });
   }
-
-  _showCountryInfo(code) {
-    const c = window.COUNTRIES[code];
-    const info = document.getElementById('country-info');
-    info.innerHTML = `
-      <div style="background:#ede7f6;padding:16px;border-radius:12px;">
-        <h3 style="margin:0;color:#5e35b1;">${c.flag} ${c.name}</h3>
-        <p style="color:#666;margin:8px 0;">点击"💬 跨境聊天"加入此国家的房间，和当地学生对话！</p>
-        <button class="btn btn-success" onclick="app.joinCountryRoom('${c.name}', '${c.flag}')" style="max-width:300px;">💬 进入 ${c.name} 聊天房间</button>
-      </div>
-    `;
-  }
-
-  joinCountryRoom(countryName, flag) {
-    const room = 'room-' + countryName;
-    Chat.room = room;
-    Chat.myCountry = flag;
-    if (!Chat.myName) {
-      const n = prompt('请输入您的姓名：');
-      if (!n) return;
-      Chat.myName = n;
-    }
-    document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
-    this.openChat();
-  }
-
-  // 💬 跨境聊天
-  openChat() {
-    if (!Chat.room) {
-      const ov = document.createElement('div');
-      ov.className = 'modal-overlay';
-      ov.onclick = e => { if (e.target === ov) ov.remove(); };
-      ov.innerHTML = `
-        <div class="modal">
-          <h2>💬 跨境聊天</h2>
-          <p style="color:#666;font-size:13px;margin-bottom:12px;">同一个房间号的师生/学生可以互相发消息。<br>支持跨境（不同国家学生接入）。</p>
-          <input id="ch-name" placeholder="您的姓名" value="${Chat.myName || ''}">
-          <input id="ch-room" placeholder="房间号（如 duanwu-2024）" value="${Chat.room || ''}">
-          <select id="ch-country" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;">
-            <option value="🇨🇳">🇨🇳 中国</option>
-            <option value="🇯🇵">🇯🇵 日本</option>
-            <option value="🇰🇷">🇰🇷 韩国</option>
-            <option value="🇸🇬">🇸🇬 新加坡</option>
-            <option value="🇺🇸">🇺🇸 美国</option>
-            <option value="🇬🇧">🇬🇧 英国</option>
-            <option value="🇫🇷">🇫🇷 法国</option>
-            <option value="🇦🇺">🇦🇺 澳大利亚</option>
-          </select>
-          <button class="btn btn-primary" id="ch-enter">进入</button>
-          <button class="btn btn-secondary" id="ch-close">关闭</button>
-          <p style="color:#999;font-size:11px;margin-top:10px;">💡 跨境延迟：当前方案支持同浏览器/电脑。真正跨境需要老师配置聊天服务器（GitHub Issues 免费方案可联系老师）</p>
-        </div>
-      `;
-      document.body.appendChild(ov);
-      document.getElementById('ch-country').value = Chat.myCountry || '🇨🇳';
-      document.getElementById('ch-close').onclick = () => ov.remove();
-      document.getElementById('ch-enter').onclick = () => {
-        const name = document.getElementById('ch-name').value.trim();
-        const room = document.getElementById('ch-room').value.trim();
-        const country = document.getElementById('ch-country').value;
-        if (!name || !room) return alert('请填写姓名和房间号');
-        Chat.myName = name; Chat.room = room; Chat.myCountry = country;
-        ov.remove();
-        this._openChatRoom();
-      };
-      return;
-    }
-    this._openChatRoom();
-  }
-
-  _openChatRoom() {
-    const ov = document.createElement('div');
-    ov.className = 'modal-overlay';
-    ov.id = 'chat-overlay';
-    ov.onclick = e => { if (e.target === ov) ov.remove(); };
-    ov.innerHTML = `
-      <div class="modal" style="max-width:560px;">
-        <h2>💬 跨境聊天 <span style="font-size:13px;color:#888;">房间: ${Chat.room}</span></h2>
-        <p style="font-size:12px;color:#888;margin-bottom:8px;">您是 <strong>${Chat.myCountry} ${Chat.myName}</strong> · <a href="#" id="ch-leave" style="color:#c62828;">退出</a> · <a href="#" id="ch-clear" style="color:#888;">清空记录</a></p>
-        <div class="chat-window">
-          <div class="chat-messages" id="chat-msgs"></div>
-          <div class="chat-input-row">
-            <input id="ch-input" placeholder="输入消息，回车发送">
-            <button class="btn btn-primary" id="ch-send">发送</button>
-          </div>
-        </div>
-        <button class="btn btn-secondary" id="ch-close" style="margin-top:10px;">关闭（不退出）</button>
-      </div>
-    `;
-    document.body.appendChild(ov);
-    document.getElementById('ch-close').onclick = () => ov.remove();
-    document.getElementById('ch-leave').onclick = e => { e.preventDefault(); Chat.room = ''; Chat.myName = ''; ov.remove(); this.openChat(); };
-    document.getElementById('ch-clear').onclick = e => { e.preventDefault(); if (confirm('清空本房间所有消息？')) { Chat.clear(); this._renderChat(); } };
-    document.getElementById('ch-send').onclick = () => this._sendChat();
-    document.getElementById('ch-input').onkeypress = e => { if (e.key === 'Enter') this._sendChat(); };
-    this._renderChat();
-    setInterval(() => this._renderChat(), 1500);
-  }
-
-  _sendChat() {
-    const input = document.getElementById('ch-input');
-    const text = input.value.trim();
-    if (!text) return;
-    Chat.send(text);
-    input.value = '';
-    this._renderChat();
-  }
-
-  _renderChat() {
-    const cont = document.getElementById('chat-msgs');
-    if (!cont) return;
-    const msgs = Chat.getMsgs();
-    cont.innerHTML = msgs.map(m => {
-      const isMe = m.from === Chat.myName;
-      const time = new Date(m.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-      return `<div class="chat-msg ${isMe ? 'me' : ''}">
-        <div>
-          ${!isMe ? `<div class="name">${m.country || '🌏'} ${m.from}</div>` : ''}
-          <div class="bubble">${this._esc(m.text)}</div>
-          <div class="time">${time}</div>
-        </div>
-      </div>`;
-    }).join('');
-    cont.scrollTop = cont.scrollHeight;
-  }
-
-  _esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   // 📹 视频课堂
   openVideo() {
@@ -495,12 +592,11 @@ class HuaXiaApp {
     const ov = document.createElement('div');
     ov.className = 'modal-overlay';
     ov.onclick = e => { if (e.target === ov) ov.remove(); };
-    ov.innerHTML = `<div class="modal"><h2>📊 我的学习记录</h2><p style="margin:8px 0;color:#666;">📖 已读 <strong>${data.views.length}</strong> 篇</p>${data.views.length === 0 ? '<p style="color:#999;">还没有阅读记录</p>' : data.views.slice(-10).reverse().map(v => `<div style="padding:8px;margin:6px 0;background:#f5f5f5;border-radius:8px;font-size:13px;">📖 <strong>${v.title}</strong><br><span style="color:#888;font-size:11px;">${new Date(v.lastRead).toLocaleString('zh-CN')}</span></div>`).join('')}<button class="btn btn-secondary" id="st-close" style="margin-top:12px;">关闭</button></div>`;
+    ov.innerHTML = `<div class="modal"><h2>📊 学习记录</h2><p style="margin:8px 0;color:#666;">📖 已读 <strong>${data.views.length}</strong> 篇</p>${data.views.length === 0 ? '<p style="color:#999;">还没有记录</p>' : data.views.slice(-10).reverse().map(v => `<div style="padding:8px;margin:6px 0;background:#f5f5f5;border-radius:8px;font-size:13px;">📖 <strong>${v.title}</strong><br><span style="color:#888;font-size:11px;">${new Date(v.lastRead).toLocaleString('zh-CN')}</span></div>`).join('')}<button class="btn btn-secondary" id="st-close" style="margin-top:12px;">关闭</button></div>`;
     document.body.appendChild(ov);
     document.getElementById('st-close').onclick = () => ov.remove();
   }
 
-  // ===== 文章渲染（保持之前成功版本）=====
   async renderCategory(cat) {
     this.currentCategory = cat;
     document.getElementById('app').innerHTML = `<div class="list-header" style="background:${cat.color || '#5e35b1'};"><button class="back-btn" id="back-btn">← 返回</button><h2 style="color:white;">${cat.icon} ${cat.name}</h2><span style="width:60px;"></span></div><div class="article-list" id="article-list">加载中...</div>`;
@@ -540,32 +636,24 @@ class HuaXiaApp {
 class ArticleRenderer {
   constructor(article) { this.article = article; }
   render(id) {
-    const c = document.getElementById(id);
-    c.innerHTML = '';
-    const header = document.createElement('div');
-    header.className = 'reader-header';
+    const c = document.getElementById(id); c.innerHTML = '';
+    const header = document.createElement('div'); header.className = 'reader-header';
     header.innerHTML = `<button class="back-btn" id="r-back">← 返回</button><h1>${this.article.title}</h1><button class="play-all-btn" id="play-all">🔊 朗读</button>`;
     c.appendChild(header);
-    const main = document.createElement('div');
-    main.className = 'article-main';
-    const cover = document.createElement('div');
-    cover.className = 'block block-image';
+    const main = document.createElement('div'); main.className = 'article-main';
+    const cover = document.createElement('div'); cover.className = 'block block-image';
     cover.style.cssText = 'text-align:center;background:linear-gradient(135deg, #ffeaa7, #fab1a0);border-radius:14px;padding:30px;margin-bottom:20px;';
     cover.innerHTML = `<div style="font-size:100px;">${this.article.coverIcon || '📖'}</div><div style="font-size:20px;color:#c0392b;font-weight:bold;margin-top:10px;">${this.article.title}</div>`;
     main.appendChild(cover);
     (this.article.content || []).forEach(b => this._render(b, main));
     c.appendChild(main);
-    const footer = document.createElement('div');
-    footer.className = 'article-footer';
-    footer.innerHTML = '🌟 华夏小课堂';
+    const footer = document.createElement('div'); footer.className = 'article-footer'; footer.innerHTML = '🌟 华夏小课堂';
     c.appendChild(footer);
     document.getElementById('r-back').onclick = () => window.app.renderCategory(window.app.currentCategory);
     document.getElementById('play-all').onclick = () => this._playAll();
   }
   _render(block, parent) {
-    const div = document.createElement('div');
-    div.className = `block block-${block.type}`;
-    div.dataset.text = block.text || block.content || '';
+    const div = document.createElement('div'); div.className = `block block-${block.type}`; div.dataset.text = block.text || block.content || '';
     if (block.type === 'paragraph' || block.type === 'story') { new PinyinLine(block.text).render(div); div.onclick = () => window.tts.speak(block.text); }
     else if (block.type === 'dialogue') { div.style.cssText = 'background:#e3f2fd;border-left:4px solid #2196f3;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;'; div.innerHTML = `<strong style="color:#1976d2;font-size:18px;">💬 ${block.speaker}：</strong>`; new PinyinLine(block.text).render(div); div.onclick = () => window.tts.speak(block.text); }
     else if (block.type === 'image') { div.classList.add('block-image'); div.innerHTML = `<div style="font-size:100px;">${block.icon || '🎨'}</div><div style="color:#666;font-style:italic;margin-top:8px;">${block.caption || ''}</div>`; }
@@ -577,11 +665,7 @@ class ArticleRenderer {
       const h = document.createElement('h3'); h.style.cssText = 'color:#2e7d32;margin:0 0 16px;cursor:pointer;'; h.textContent = '✏️ ' + (block.title || '生字乐园');
       div.appendChild(h);
       const grid = document.createElement('div'); grid.className = 'vocab-grid';
-      (block.words || []).forEach(w => {
-        let dp = w.pinyin || '';
-        if (w.pinyin && w.tone) dp = window.toTonedPinyin(w.pinyin, w.tone);
-        new TianZiGe(w.char, dp).render(grid);
-      });
+      (block.words || []).forEach(w => { let dp = w.pinyin || ''; if (w.pinyin && w.tone) dp = window.toTonedPinyin(w.pinyin, w.tone); new TianZiGe(w.char, dp).render(grid); });
       div.appendChild(grid);
       h.onclick = e => { e.stopPropagation(); window.tts.speak((block.words || []).map(w => w.char).join('')); };
     }
@@ -592,13 +676,10 @@ class ArticleRenderer {
     window.tts.stop();
     const blocks = document.querySelectorAll('.article-main .block-paragraph, .article-main .block-story, .article-main .block-dialogue, .article-main .block-knowledge, .article-main .block-poem, .article-main .block-question');
     for (const b of blocks) {
-      const text = b.dataset.text;
-      if (!text) continue;
-      b.style.background = '#fff9c4';
-      b.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const text = b.dataset.text; if (!text) continue;
+      b.style.background = '#fff9c4'; b.scrollIntoView({ behavior: 'smooth', block: 'center' });
       await new Promise(r => window.tts.speak(text, { onEnd: r, rate: 0.85 }));
-      b.style.background = '';
-      await new Promise(r => setTimeout(r, 500));
+      b.style.background = ''; await new Promise(r => setTimeout(r, 500));
     }
   }
 }
