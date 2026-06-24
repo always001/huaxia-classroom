@@ -6,7 +6,81 @@
 <title>教师后台 · 华夏小课堂</title>
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/dist/index.js"></script>
 <style>
-/* （CSS 跟之前一样，省略，复用） */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f5f5f5; color: #333; }
+  header {
+    background: linear-gradient(135deg, #5e35b1, #311b92); color: white;
+    padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 22px; font-family: 楷体; }
+  header .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  header button {
+    background: rgba(255,255,255,0.2); color: white; border: 1px solid white;
+    padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px;
+  }
+  header button.primary { background: white; color: #5e35b1; font-weight: bold; }
+  header button.success { background: #4caf50; color: white; border-color: #4caf50; }
+
+  .panel { padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .panel h2 { color: #5e35b1; margin-bottom: 12px; }
+  .panel p { color: #666; font-size: 13px; margin-bottom: 12px; }
+
+  .btn {
+    padding: 10px 20px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: bold; margin-right: 8px;
+  }
+  .btn-primary { background: linear-gradient(135deg, #7e57c2, #4527a0); color: white; }
+  .btn-success { background: linear-gradient(135deg, #66bb6a, #2e7d32); color: white; }
+  .btn-secondary { background: #f0f0f0; color: #333; }
+  .btn-danger { background: #ef5350; color: white; }
+  .btn:hover { transform: translateY(-2px); }
+
+  input, select, textarea {
+    padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; margin-top: 16px;
+    background: white; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  th { background: #7e57c2; color: white; padding: 12px; text-align: left; font-size: 13px; }
+  td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+  tr:hover { background: #fafafa; }
+  .country-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    background: #ede7f6; color: #5e35b1; font-size: 11px; margin-left: 6px;
+  }
+  .ip-tag {
+    font-family: monospace; background: #f5f5f5; padding: 2px 6px; border-radius: 4px;
+  }
+
+  .empty { text-align: center; padding: 40px; color: #888; }
+  .loading { text-align: center; padding: 40px; color: #5e35b1; }
+
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
+  }
+  .filter-bar input, .filter-bar select { margin: 0; }
+
+  .stat-card {
+    display: inline-block; padding: 12px 20px; margin: 4px;
+    background: white; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .stat-card .num { font-size: 24px; font-weight: bold; color: #5e35b1; }
+  .stat-card .label { font-size: 12px; color: #666; }
+
+  .panel-tabs {
+    display: flex; gap: 8px; margin-bottom: 16px;
+    border-bottom: 2px solid #f0f0f0;
+  }
+  .panel-tab {
+    padding: 10px 20px; cursor: pointer; background: none; border: none;
+    font-size: 14px; color: #888;
+  }
+  .panel-tab.active { color: #5e35b1; border-bottom: 3px solid #5e35b1; margin-bottom: -2px; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -15,164 +89,363 @@
   <h1>👩‍🏫 华夏小课堂 · 教师后台</h1>
   <div class="actions">
     <button onclick="window.open('../index.html','_blank')">👀 学生端</button>
-    <button onclick="exportJSON()">💾 导出JSON</button>
-    <button class="success" onclick="publishToGithub()">🚀 发布</button>
-    <button class="primary" onclick="openVisitorPanel()">📊 访问记录</button>
-    <button class="primary" onclick="openChatPanel()">💬 聊天记录</button>
+    <button onclick="showPanel('editor')">✏️ 编辑文章</button>
+    <button class="success" onclick="showPanel('visitor')">📊 访问记录</button>
+    <button onclick="showPanel('chat')">💬 聊天记录</button>
   </div>
 </header>
 
+<!-- 编辑器面板 -->
+<div id="panel-editor" class="panel" style="display:none;">
+  <h2>✏️ 编辑文章</h2>
+  <p>（编辑器保留原有功能，本版本专注美化访问记录面板）</p>
+  <p>👉 老师可以用学生端的「⚙️ 配置」按钮配置 GitHub，然后在这里查看数据。</p>
+</div>
+
 <!-- 访问记录面板 -->
-<div id="visitor-panel" style="display:none;padding:20px;">
-  <h2 style="color:#5e35b1;">📊 访问记录</h2>
-  <p style="color:#666;font-size:13px;">从您的 GitHub 私有仓库 <code>hx-visitor-data</code> 读取所有访客的 IP 和位置。</p>
-  <button class="btn btn-primary" onclick="loadVisitors()">🔄 加载记录</button>
-  <button class="btn btn-success" onclick="exportVisitorsCSV()">📥 导出 CSV</button>
-  <div id="visitor-list" style="margin-top:16px;"></div>
+<div id="panel-visitor" class="panel" style="display:none;">
+  <h2>📊 访问记录</h2>
+  <p>从您的 GitHub 私有仓库 <code>hx-visitor-data</code> 读取所有访客的 IP 和位置。</p>
+
+  <div class="filter-bar">
+    <button class="btn btn-primary" onclick="loadVisitors()">🔄 加载记录</button>
+    <button class="btn btn-success" onclick="exportVisitorsCSV()">📥 导出 CSV</button>
+    <input type="text" id="filter-country" placeholder="🔍 按国家筛选" oninput="renderVisitorTable()">
+    <select id="sort-by" onchange="renderVisitorTable()">
+      <option value="time-desc">时间倒序</option>
+      <option value="time-asc">时间正序</option>
+      <option value="country">按国家</option>
+    </select>
+  </div>
+
+  <div id="visitor-stats"></div>
+  <div id="visitor-list"></div>
 </div>
 
 <!-- 聊天记录面板 -->
-<div id="chat-panel" style="display:none;padding:20px;">
-  <h2 style="color:#5e35b1;">💬 聊天记录</h2>
-  <input id="admin-chat-room" placeholder="输入房间号查看" style="width:100%;padding:10px;margin:8px 0;">
-  <button class="btn btn-primary" onclick="loadChatMessages()">🔄 加载消息</button>
-  <div id="chat-list" style="margin-top:16px;"></div>
-</div>
-
-<!-- 编辑器 -->
-<div id="editor-area">
-  <!-- 之前的编辑器代码 -->
+<div id="panel-chat" class="panel" style="display:none;">
+  <h2>💬 聊天记录</h2>
+  <p>从您的 GitHub 私有仓库 <code>hx-chat-data</code> 读取聊天消息。</p>
+  <div class="filter-bar">
+    <input type="text" id="chat-room-input" placeholder="输入房间号（如 duanwu-2024）">
+    <button class="btn btn-primary" onclick="loadChatMessages()">🔄 加载消息</button>
+    <button class="btn btn-danger" onclick="deleteRoom()">🗑️ 删除房间</button>
+  </div>
+  <div id="chat-list"></div>
 </div>
 
 <script>
-function openVisitorPanel() {
-  document.getElementById('editor-area').style.display = 'none';
-  document.getElementById('chat-panel').style.display = 'none';
-  document.getElementById('visitor-panel').style.display = 'block';
-}
-function openChatPanel() {
-  document.getElementById('editor-area').style.display = 'none';
-  document.getElementById('visitor-panel').style.display = 'none';
-  document.getElementById('chat-panel').style.display = 'block';
+// ===== 通用工具 =====
+function showPanel(name) {
+  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  document.getElementById('panel-' + name).style.display = 'block';
 }
 
-async function loadVisitors() {
-  const cfg = JSON.parse(localStorage.getItem('hx_gh_config') || '{}');
-  if (!cfg.user || !cfg.token || !cfg.visitRepo) {
-    alert('请先在学生端「⚙️ 配置」里填 GitHub 信息');
-    return;
-  }
-  const list = document.getElementById('visitor-list');
-  list.innerHTML = '加载中...';
+// ✨ 时区友好的日期格式化
+function formatDate(isoStr) {
+  if (!isoStr) return '';
   try {
-    const v = new GitHubVisitor(cfg.user, cfg.token, cfg.visitRepo);
-    const records = await v.getAll();
-    if (records.length === 0) {
-      list.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">还没有访问记录</p>';
-      return;
-    }
-    list.innerHTML = `
-      <p style="color:#666;font-size:13px;">共 <strong>${records.length}</strong> 条记录</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;">
-        <tr style="background:#7e57c2;color:white;">
-          <th style="padding:8px;text-align:left;">时间</th>
-          <th style="padding:8px;text-align:left;">IP</th>
-          <th style="padding:8px;text-align:left;">位置</th>
-          <th style="padding:8px;text-align:left;">UA</th>
-        </tr>
-        ${records.map(r => `<tr style="border-bottom:1px solid #eee;">
-          <td style="padding:8px;">${r.time}</td>
-          <td style="padding:8px;">${r.ip}</td>
-          <td style="padding:8px;">${r.country}${r.region ? '·' + r.region : ''}${r.city ? '·' + r.city : ''}</td>
-          <td style="padding:8px;font-size:11px;color:#888;">${(r.ua || '').substring(0, 40)}</td>
-        </tr>`).join('')}
-      </table>
-    `;
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
   } catch (e) {
-    list.innerHTML = '<p style="color:#c62828;">加载失败：' + e.message + '</p>';
+    return isoStr;
   }
 }
 
-function exportVisitorsCSV() {
-  alert('请先用「加载记录」加载，然后复制表格内容到 Excel');
-  // 也可以扩展为导出 CSV
-}
-
-async function loadChatMessages() {
-  const cfg = JSON.parse(localStorage.getItem('hx_gh_config') || '{}');
-  const room = document.getElementById('admin-chat-room').value.trim();
-  if (!cfg.user || !cfg.token || !cfg.chatRepo) return alert('请先配置');
-  if (!room) return alert('请输入房间号');
-  const list = document.getElementById('chat-list');
-  list.innerHTML = '加载中...';
+// ✨ 相对时间（"刚刚"、"5分钟前"）
+function relativeTime(isoStr) {
+  if (!isoStr) return '';
   try {
-    const c = new GitHubChat(cfg.user, cfg.token, cfg.chatRepo);
-    const msgs = await c.getMessages(room);
-    if (msgs.length === 0) {
-      list.innerHTML = '<p style="color:#888;">还没有消息</p>';
-      return;
-    }
-    list.innerHTML = msgs.map(m => `
-      <div style="padding:10px;margin:8px 0;background:#f5f5f5;border-radius:8px;">
-        <div style="font-size:12px;color:#888;">${m.country} ${m.from} · ${new Date(m.time).toLocaleString('zh-CN')}</div>
-        <div style="margin-top:6px;">${m.text}</div>
-      </div>
-    `).join('');
+    const d = new Date(isoStr);
+    const diff = Date.now() - d.getTime();
+    if (diff < 0) return formatDate(isoStr);
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return '刚刚';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}分钟前`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}小时前`;
+    const day = Math.floor(hr / 24);
+    if (day < 7) return `${day}天前`;
+    return formatDate(isoStr);
   } catch (e) {
-    list.innerHTML = '<p style="color:#c62820;">加载失败：' + e.message + '</p>';
+    return isoStr;
   }
 }
 
-// GitHubChat / GitHubVisitor 类（跟 index.html 一样）
+// ===== GitHub 配置 =====
+function getCfg() {
+  return JSON.parse(localStorage.getItem('hx_gh_config') || '{}');
+}
+
+function checkCfg() {
+  const cfg = getCfg();
+  if (!cfg.user || !cfg.token || !cfg.chatRepo || !cfg.visitRepo) {
+    alert('⚠️ 请先在学生端「⚙️ 配置」按钮里填好 GitHub 信息（用户名、Token、2个仓库名）');
+    return false;
+  }
+  return true;
+}
+
+// ===== GitHubChat 类 =====
 class GitHubChat {
   constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
   get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
   headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
+
   async getRoomIssue(roomId) {
-    const r = await fetch(`${this.base}/issues?labels=chat-room&state=open&per_page=100`, { headers: this.headers() });
-    if (!r.ok) throw new Error('获取房间失败：' + r.status);
-    const issues = await r.json();
+    const r = await this._fetchWithTimeout(`${this.base}/issues?labels=chat-room&state=open&per_page=100`, { headers: this.headers() });
+    const issues = JSON.parse(r);
     let issue = issues.find(i => i.title === `[Chat] ${roomId}`);
-    if (!issue) throw new Error('房间不存在');
+    if (!issue) throw new Error('房间不存在：' + roomId);
     return issue;
   }
+
   async getMessages(roomId) {
     const issue = await this.getRoomIssue(roomId);
-    const r = await fetch(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
-    if (!r.ok) throw new Error('读取失败');
-    const comments = await r.json();
+    const r = await this._fetchWithTimeout(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
+    const comments = JSON.parse(r);
     return comments.map(c => {
       const m = c.body.match(/^\*\*([\u{1F000}-\u{1FFFF}\u{1F300}-\u{1F9FF}]*?)\s*([^*]+?)\*\*\s*·\s*([\s\S]*?)\n\n([\s\S]*)$/u);
       if (m) return { id: c.id, from: m[2].trim(), country: m[1].trim(), time: c.created_at, text: m[4] };
       return { id: c.id, from: c.user.login, country: '🌏', time: c.created_at, text: c.body };
     });
   }
+
+  async deleteRoom(roomId) {
+    const issue = await this.getRoomIssue(roomId);
+    await this._fetchWithTimeout(`${this.base}/issues/${issue.number}`, {
+      method: 'PATCH', headers: this.headers(),
+      body: JSON.stringify({ state: 'closed' })
+    });
+  }
+
+  async _fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 15000);
+    try {
+      const r = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(tid);
+      if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.statusText);
+      return await r.text();
+    } catch (e) {
+      clearTimeout(tid);
+      if (e.name === 'AbortError') throw new Error('请求超时（15秒），请检查网络');
+      throw e;
+    }
+  }
 }
 
+// ===== GitHubVisitor 类 =====
 class GitHubVisitor {
   constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
   get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
   headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
+
   async getAll() {
-    const r = await fetch(`${this.base}/issues?labels=visitor-log&state=all&per_page=30`, { headers: this.headers() });
-    if (!r.ok) throw new Error('读取失败');
-    const issues = await r.json();
+    const r = await this._fetchWithTimeout(`${this.base}/issues?labels=visitor-log&state=all&per_page=30`, { headers: this.headers() });
+    const issues = JSON.parse(r);
     const all = [];
     for (const issue of issues) {
-      const cr = await fetch(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
-      if (!cr.ok) continue;
-      const comments = await cr.json();
-      comments.forEach(c => {
-        const lines = c.body.split('\n').filter(l => l.startsWith('|') && !l.includes('---'));
-        lines.slice(1).forEach(line => {
-          const cols = line.split('|').map(c => c.trim()).filter(Boolean);
-          if (cols.length >= 5) all.push({ time: cols[0], ip: cols[1], country: cols[2], region: cols[3], city: cols[4], ua: cols[5] || '', page: cols[6] || '' });
+      try {
+        const cr = await this._fetchWithTimeout(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
+        const comments = JSON.parse(cr);
+        comments.forEach(c => {
+          // 解析表格行：| 时间 | IP | 国家 | 地区 | 城市 | UA | 页面 |
+          const lines = c.body.split('\n').filter(l => l.startsWith('|') && !l.includes('---') && !l.includes('时间'));
+          lines.forEach(line => {
+            const cols = line.split('|').map(c => c.trim()).filter(Boolean);
+            if (cols.length >= 5) {
+              all.push({
+                time: cols[0],
+                ip: cols[1],
+                country: cols[2],
+                region: cols[3] || '',
+                city: cols[4] || '',
+                ua: cols[5] || '',
+                page: cols[6] || ''
+              });
+            }
+          });
         });
-      });
+      } catch (e) { console.warn('读取issue失败', e); }
     }
     return all.reverse();
   }
+
+  async _fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 15000);
+    try {
+      const r = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(tid);
+      if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.statusText);
+      return await r.text();
+    } catch (e) {
+      clearTimeout(tid);
+      if (e.name === 'AbortError') throw new Error('请求超时（15秒），请检查网络或 Token');
+      throw e;
+    }
+  }
 }
+
+// ===== 访问记录 =====
+let allVisitors = [];
+
+async function loadVisitors() {
+  if (!checkCfg()) return;
+  const cfg = getCfg();
+  const list = document.getElementById('visitor-list');
+  const stats = document.getElementById('visitor-stats');
+  list.innerHTML = '<p class="loading">⏳ 正在从 GitHub 加载...</p>';
+  stats.innerHTML = '';
+
+  try {
+    const v = new GitHubVisitor(cfg.user, cfg.token, cfg.visitRepo);
+    allVisitors = await v.getAll();
+    if (allVisitors.length === 0) {
+      list.innerHTML = '<p class="empty">📭 还没有访问记录<br><br>请打开学生端 <a href="../" target="_blank">首页</a> 触发一次访问，等 5 秒后再加载。</p>';
+      return;
+    }
+    renderVisitorTable();
+  } catch (e) {
+    list.innerHTML = `<p style="color:#c62828;padding:20px;">❌ 加载失败：${e.message}<br><br>
+      💡 可能原因：<br>
+      • Token 无效（请重新生成）<br>
+      • 仓库名不对（应该是 hx-visitor-data）<br>
+      • 仓库不是 Private<br>
+      • 网络问题</p>`;
+  }
+}
+
+function renderVisitorTable() {
+  const list = document.getElementById('visitor-list');
+  const stats = document.getElementById('visitor-stats');
+  if (allVisitors.length === 0) return;
+
+  // 筛选
+  const filterCountry = document.getElementById('filter-country').value.trim().toLowerCase();
+  let filtered = filterCountry
+    ? allVisitors.filter(v => (v.country + ' ' + v.region + ' ' + v.city).toLowerCase().includes(filterCountry))
+    : allVisitors;
+
+  // 排序
+  const sortBy = document.getElementById('sort-by').value;
+  if (sortBy === 'time-desc') filtered.sort((a, b) => new Date(b.time) - new Date(a.time));
+  else if (sortBy === 'time-asc') filtered.sort((a, b) => new Date(a.time) - new Date(b.time));
+  else if (sortBy === 'country') filtered.sort((a, b) => a.country.localeCompare(b.country));
+
+  // 统计
+  const countries = new Set(filtered.map(v => v.country));
+  const uniqueIPs = new Set(filtered.map(v => v.ip));
+  stats.innerHTML = `
+    <div class="stat-card"><div class="num">${filtered.length}</div><div class="label">总访问</div></div>
+    <div class="stat-card"><div class="num">${uniqueIPs.size}</div><div class="label">独立 IP</div></div>
+    <div class="stat-card"><div class="num">${countries.size}</div><div class="label">国家/地区</div></div>
+  `;
+
+  // 表格
+  list.innerHTML = `
+    <table>
+      <tr>
+        <th>📅 访问时间（本地）</th>
+        <th>⏱ 多久前</th>
+        <th>🌍 位置</th>
+        <th>🔢 IP</th>
+        <th>💻 浏览器</th>
+      </tr>
+      ${filtered.map(v => `<tr>
+        <td>${formatDate(v.time)}</td>
+        <td style="color:#888;">${relativeTime(v.time)}</td>
+        <td>
+          <strong>${v.country || '未知'}</strong>
+          ${v.region ? `<span class="country-tag">${v.region}</span>` : ''}
+          ${v.city ? `<span class="country-tag">${v.city}</span>` : ''}
+        </td>
+        <td><span class="ip-tag">${v.ip || '—'}</span></td>
+        <td style="font-size:11px;color:#888;">${(v.ua || '').substring(0, 50)}...</td>
+      </tr>`).join('')}
+    </table>
+  `;
+}
+
+function exportVisitorsCSV() {
+  if (allVisitors.length === 0) return alert('请先加载记录');
+  const csv = '\uFEFF时间,IP,国家,地区,城市,UA\n' + allVisitors.map(v =>
+    `${formatDate(v.time)},${v.ip},${v.country},${v.region || ''},${v.city || ''},"${(v.ua || '').replace(/"/g, '""')}"`
+  ).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `访问记录_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===== 聊天记录 =====
+async function loadChatMessages() {
+  if (!checkCfg()) return;
+  const cfg = getCfg();
+  const room = document.getElementById('chat-room-input').value.trim();
+  if (!room) return alert('请输入房间号');
+  const list = document.getElementById('chat-list');
+  list.innerHTML = '<p class="loading">⏳ 加载中...</p>';
+
+  try {
+    const c = new GitHubChat(cfg.user, cfg.token, cfg.chatRepo);
+    const msgs = await c.getMessages(room);
+    if (msgs.length === 0) {
+      list.innerHTML = '<p class="empty">📭 该房间还没有消息</p>';
+      return;
+    }
+    list.innerHTML = `
+      <p style="color:#666;font-size:13px;margin-bottom:12px;">房间 <strong>${room}</strong> 共 <strong>${msgs.length}</strong> 条消息</p>
+      ${msgs.map(m => `
+        <div style="padding:12px;margin:8px 0;background:white;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:6px;">
+            <span><strong style="color:#5e35b1;">${m.country} ${m.from}</strong></span>
+            <span title="${formatDate(m.time)}">${relativeTime(m.time)}</span>
+          </div>
+          <div>${escapeHtml(m.text)}</div>
+        </div>
+      `).join('')}
+    `;
+  } catch (e) {
+    list.innerHTML = `<p style="color:#c62828;">❌ 加载失败：${e.message}<br><br>💡 请确认房间号正确（区分大小写）</p>`;
+  }
+}
+
+async function deleteRoom() {
+  if (!checkCfg()) return;
+  const room = document.getElementById('chat-room-input').value.trim();
+  if (!room) return alert('请输入房间号');
+  if (!confirm(`确定删除房间 "${room}"？\n（这会关闭 GitHub Issue，相关消息仍保留）`)) return;
+  const cfg = getCfg();
+  try {
+    const c = new GitHubChat(cfg.user, cfg.token, cfg.chatRepo);
+    await c.deleteRoom(room);
+    alert('✅ 房间已关闭');
+    loadChatMessages();
+  } catch (e) {
+    alert('❌ 删除失败：' + e.message);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// 默认显示编辑面板
+showPanel('editor');
 </script>
+
 </body>
 </html>
