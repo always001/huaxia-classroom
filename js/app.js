@@ -1,42 +1,17 @@
-/**
- * 华夏小课堂 - 主应用（访问记录优化版）
- * ✨ 优化点：缓存当天 Issue + 失败降级 + 批处理
- * ✨ 保证：不改任何现有功能，只优化访问记录
- */
 class HuaXiaTTS {
   constructor() {
     this.synth = window.speechSynthesis;
-    this.voice = null;
-    this.ready = false;
-    this.onReadyCallbacks = [];
+    this.voice = null; this.ready = false; this.onReadyCallbacks = [];
     this.statusEl = document.getElementById('tts-status');
     this._init();
   }
   _init() {
-    const load = () => {
-      const voices = this.synth.getVoices();
-      if (!voices.length) return false;
-      this.voice = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name))
-                 || voices.find(v => /zh/i.test(v.lang));
-      this.ready = !!this.voice;
-      if (this.ready) { this.onReadyCallbacks.forEach(cb => cb()); this.onReadyCallbacks = []; }
-      return this.ready;
-    };
-    if (!load()) {
-      this.synth.addEventListener('voiceschanged', load);
-      let n = 0; const t = setInterval(() => { if (load() || ++n > 20) clearInterval(t); }, 200);
-    }
+    const load = () => { const voices = this.synth.getVoices(); if (!voices.length) return false; this.voice = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name)) || voices.find(v => /zh/i.test(v.lang)); this.ready = !!this.voice; if (this.ready) { this.onReadyCallbacks.forEach(cb => cb()); this.onReadyCallbacks = []; } return this.ready; };
+    if (!load()) { this.synth.addEventListener('voiceschanged', load); let n = 0; const t = setInterval(() => { if (load() || ++n > 20) clearInterval(t); }, 200); }
   }
   onReady(cb) { this.ready ? cb() : this.onReadyCallbacks.push(cb); }
   speak(text, options = {}) { if (!text) return; if (!this.ready) { this.onReady(() => this._speakNow(text, options)); return; } this._speakNow(text, options); }
-  _speakNow(text, options = {}) {
-    this.synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.voice = this.voice; u.lang = this.voice.lang || 'zh-CN'; u.rate = options.rate ?? 0.85;
-    if (this.statusEl) this.statusEl.style.display = 'block';
-    u.onend = u.onerror = () => { if (this.statusEl) this.statusEl.style.display = 'none'; if (options.onEnd) options.onEnd(); };
-    this.synth.speak(u);
-  }
+  _speakNow(text, options = {}) { this.synth.cancel(); const u = new SpeechSynthesisUtterance(text); u.voice = this.voice; u.lang = this.voice.lang || 'zh-CN'; u.rate = options.rate ?? 0.85; if (this.statusEl) this.statusEl.style.display = 'block'; u.onend = u.onerror = () => { if (this.statusEl) this.statusEl.style.display = 'none'; if (options.onEnd) options.onEnd(); }; this.synth.speak(u); }
   stop() { this.synth.cancel(); if (this.statusEl) this.statusEl.style.display = 'none'; }
 }
 
@@ -80,10 +55,22 @@ class PinyinLine {
 class HuaXiaApp {
   init() {
     this.renderHome();
+    this._bindLifecycleUpload();  // ✨ 绑定生命周期事件（关键修复）
     setTimeout(() => this._logVisit(), 100);
   }
 
-  // ✨ 优化版访问记录：3 重保险
+  // ✨ 关键修复：页面关闭/隐藏时立即上传
+  _bindLifecycleUpload() {
+    // 页面隐藏时（用户切走标签页、最小化）
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this._flushVisitQueueBeacon();
+    });
+    // 页面关闭时
+    window.addEventListener('pagehide', () => this._flushVisitQueueBeacon());
+    // 兜底：每 60 秒检查一次
+    setInterval(() => this._flushVisitQueue(), 60000);
+  }
+
   async _logVisit() {
     try {
       const loc = await this._getLocWithCache();
@@ -91,105 +78,89 @@ class HuaXiaApp {
       const el = document.getElementById('my-location');
       if (el) el.textContent = loc.country === '未知' ? '🌍 位置暂不可用' : `🌍 ${loc.country}${loc.region ? '·' + loc.region : ''}${loc.city ? '·' + loc.city : ''}`;
 
-      // 30 分钟内同 IP 不重复记录
       const recent = JSON.parse(localStorage.getItem('hx_recent_log') || '{}');
       if (recent.ip === loc.ip && Date.now() - recent.time < 30 * 60 * 1000) return;
 
       if (window.GH && window.GH.hasAuth()) {
-        // ✨ 改进 1：先存 localStorage（保证不丢）
-        // ✨ 改进 2：再尝试上传（失败重试）
         const record = { time: new Date().toISOString(), ip: loc.ip, country: loc.country, region: loc.region, city: loc.city, ua: navigator.userAgent.substring(0, 60), page: '/' };
         localStorage.setItem('hx_recent_log', JSON.stringify({ ip: loc.ip, time: Date.now() }));
-        
-        // 加入待上传队列
         this._addToVisitQueue(record);
       }
     } catch (e) { console.warn('log visit:', e); }
   }
 
-  // ✨ 改进 1：缓存当天 Issue 编号
   async _getTodayIssue() {
     const date = new Date().toISOString().slice(0, 10);
     const cacheKey = 'hx_visit_issue_' + date;
-    
-    // 1. 先看缓存
     const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try { return JSON.parse(cached); } catch (e) {}
-    }
-
-    // 2. 查 GitHub
+    if (cached) { try { return JSON.parse(cached); } catch (e) {} }
     const cfg = window.GH.cfg;
     try {
       const r = await this._ghFetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues?labels=visitor-log&state=open&per_page=10`);
       const issues = JSON.parse(r);
       let issue = issues.find(i => i.title === `访客记录 ${date}`);
-      if (issue) {
-        localStorage.setItem(cacheKey, JSON.stringify({ number: issue.number, date }));
-        return { number: issue.number, date };
-      }
-      // 没找到，创建
-      const cr = await this._ghFetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues`, {
-        method: 'POST', headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: `访客记录 ${date}`, body: `# ${date} 访客日志\n\n由华夏小课堂自动创建`, labels: ['visitor-log'] })
-      });
+      if (issue) { localStorage.setItem(cacheKey, JSON.stringify({ number: issue.number, date })); return { number: issue.number, date }; }
+      const cr = await this._ghFetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues`, { method: 'POST', headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ title: `访客记录 ${date}`, body: `# ${date} 访客日志`, labels: ['visitor-log'] }) });
       issue = JSON.parse(cr);
       localStorage.setItem(cacheKey, JSON.stringify({ number: issue.number, date }));
       return { number: issue.number, date };
-    } catch (e) {
-      console.warn('获取当天 Issue 失败:', e);
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
-  // ✨ 改进 2：失败降级 + 批处理
   _addToVisitQueue(record) {
     try {
-      // 1. 立即存到 localStorage（永不丢失）
       const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
       queue.push(record);
       localStorage.setItem('hx_visit_queue', JSON.stringify(queue));
-      
-      // 2. 触发批处理（防抖：5 秒内多次访问只发一次请求）
+      // ✨ 5 秒后尝试上传（普通情况）
       clearTimeout(this._batchTimer);
       this._batchTimer = setTimeout(() => this._flushVisitQueue(), 5000);
-    } catch (e) { console.warn('addToVisitQueue:', e); }
+    } catch (e) {}
   }
 
-  // ✨ 改进 3：批量上传
+  // ✨ 关键修复：使用 sendBeacon 立即上传
+  _flushVisitQueueBeacon() {
+    try {
+      const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
+      if (queue.length === 0) return;
+      const cfg = window.GH.cfg;
+      if (!cfg.user || !cfg.token) return;
+      const issue = this._getTodayIssueSync();
+      if (!issue) return;
+      const body = this._formatBatchComment(queue);
+      const url = `https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`;
+      // ✨ sendBeacon 即使页面关闭也能完成！
+      const blob = new Blob([JSON.stringify({ body })], { type: 'application/json' });
+      const sent = navigator.sendBeacon(url, blob);
+      if (sent) localStorage.setItem('hx_visit_queue', '[]');
+    } catch (e) {}
+  }
+
+  // 同步获取缓存的 Issue（不等待 Promise）
+  _getTodayIssueSync() {
+    const date = new Date().toISOString().slice(0, 10);
+    const cached = localStorage.getItem('hx_visit_issue_' + date);
+    if (cached) { try { return JSON.parse(cached); } catch (e) {} }
+    return null;
+  }
+
+  // 普通 fetch 上传（60 秒兜底用）
   async _flushVisitQueue() {
     try {
       const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
       if (queue.length === 0) return;
-
       const cfg = window.GH.cfg;
       if (!cfg.user || !cfg.token) return;
-
-      // 获取当天 Issue（用缓存）
       const issue = await this._getTodayIssue();
-      if (!issue) {
-        console.warn('无法获取 Issue，留待下次重试');
-        return; // 留在 queue 里，下次再试
-      }
-
-      // 批量添加评论（一次只发 1 条请求，包含所有记录）
+      if (!issue) return;
       const body = this._formatBatchComment(queue);
       try {
-        await this._ghFetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`, {
-          method: 'POST', headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ body })
-        });
-        // ✨ 上传成功，清空队列
+        await this._ghFetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`, { method: 'POST', headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
         localStorage.setItem('hx_visit_queue', '[]');
-        console.log(`✅ 批量上传 ${queue.length} 条访问记录`);
-      } catch (e) {
-        console.warn('上传失败，留待下次重试:', e);
-        // 不清空队列，下次再试
-      }
-    } catch (e) { console.warn('flushVisitQueue:', e); }
+      } catch (e) {}
+    } catch (e) {}
   }
 
-  // ✨ 改进 3 辅助：批量格式化
   _formatBatchComment(records) {
     const lines = ['| 时间 | IP | 国家 | 地区 | 城市 | UA | 页面 |', '|---|---|---|---|---|---|---|'];
     records.forEach(r => {
@@ -198,7 +169,6 @@ class HuaXiaApp {
     return lines.join('\n');
   }
 
-  // GitHub 请求封装（带超时）
   _ghFetch(url, options = {}) {
     return new Promise((resolve, reject) => {
       const ctrl = new AbortController();
@@ -210,18 +180,10 @@ class HuaXiaApp {
     });
   }
 
-  // IP 获取（多重 fallback）
   async _getLocWithCache() {
     const cached = JSON.parse(localStorage.getItem('hx_my_loc') || 'null');
-    // 24 小时内不重新查 IP
-    if (cached && Date.now() - (cached._t || 0) < 24 * 60 * 60 * 1000) {
-      return cached;
-    }
-    const sources = [
-      'https://ipwho.is/',
-      'http://ip-api.com/json/?lang=zh-CN',
-      'https://ipapi.co/json/'
-    ];
+    if (cached && Date.now() - (cached._t || 0) < 24 * 60 * 60 * 1000) return cached;
+    const sources = ['https://ipwho.is/', 'http://ip-api.com/json/?lang=zh-CN', 'https://ipapi.co/json/'];
     for (const url of sources) {
       try {
         const ctrl = new AbortController();
@@ -239,7 +201,6 @@ class HuaXiaApp {
   }
 
   // ===== 以下代码完全不动（保留所有现有功能）=====
-
   renderHome() {
     document.getElementById('app').innerHTML = `
       <div class="home-header">
@@ -263,7 +224,6 @@ class HuaXiaApp {
     const loc = JSON.parse(localStorage.getItem('hx_my_loc') || 'null');
     const locEl = document.getElementById('my-location');
     if (locEl && loc && loc.country && loc.country !== '未知') locEl.textContent = `🌍 ${loc.country}${loc.region ? '·' + loc.region : ''}${loc.city ? '·' + loc.city : ''}`;
-
     const cats = [
       { id: 'festivals', name: '传统节日', icon: '🎊', color: '#e74c3c' },
       { id: 'heroes', name: '历史人物', icon: '🦸', color: '#3498db' },
@@ -282,7 +242,6 @@ class HuaXiaApp {
       cc.appendChild(card);
     });
   }
-
   togglePinyin() { const isHidden = document.body.classList.toggle('hide-pinyin'); const btn = document.getElementById('pinyin-toggle'); if (btn) btn.textContent = isHidden ? '👁️‍🗨️ 显示拼音' : '👁️ 隐藏拼音'; }
 
   openSetup() {
@@ -314,17 +273,12 @@ class HuaXiaApp {
       try {
         const r = await this._ghFetch(`https://api.github.com/repos/${window.GH.cfg.user}/${window.GH.cfg.chatRepo}`, { headers: { 'Authorization': `token ${window.GH.cfg.token}` }});
         msg.innerHTML = '✅ 连接成功';
-      } catch (e) {
-        msg.innerHTML = '❌ 失败：' + e.message;
-      }
+      } catch (e) { msg.innerHTML = '❌ 失败：' + e.message; }
     };
   }
 
   openChat() {
-    if (!window.GH.hasAuth()) {
-      if (confirm('请先配置 GitHub。是否现在配置？')) this.openSetup();
-      return;
-    }
+    if (!window.GH.hasAuth()) { if (confirm('请先配置 GitHub。是否现在配置？')) this.openSetup(); return; }
     const myName = localStorage.getItem('hx_chat_name') || '';
     const myCountry = localStorage.getItem('hx_chat_country') || '🇨🇳';
     const myRoom = localStorage.getItem('hx_chat_room') || '';
@@ -356,7 +310,6 @@ class HuaXiaApp {
     document.body.appendChild(ov);
     document.getElementById('ch-close').onclick = () => ov.remove();
     document.getElementById('ch-leave').onclick = e => { e.preventDefault(); ov.remove(); this.openChat(); };
-
     const send = async () => {
       const input = document.getElementById('ch-input');
       const text = input.value.trim();
@@ -366,15 +319,11 @@ class HuaXiaApp {
         const c = new GitHubChat(window.GH.cfg.user, window.GH.cfg.token, window.GH.cfg.chatRepo);
         await c.sendMessage(room, name, country, text);
         await this._renderChatMessages(room, name);
-      } catch (e) {
-        alert('发送失败：' + e.message);
-      } finally {
-        input.disabled = false; input.focus();
-      }
+      } catch (e) { alert('发送失败：' + e.message); }
+      finally { input.disabled = false; input.focus(); }
     };
     document.getElementById('ch-send').onclick = send;
     document.getElementById('ch-input').onkeypress = e => { if (e.key === 'Enter') send(); };
-
     this._renderChatMessages(room, name);
     this._chatTimer = setInterval(() => this._renderChatMessages(room, name), 3000);
   }
@@ -391,11 +340,8 @@ class HuaXiaApp {
         return `<div class="chat-msg ${isMe ? 'me' : ''}"><div>${!isMe ? `<div class="name">${m.country} ${m.from}</div>` : ''}<div class="bubble">${this._esc(m.text)}</div><div class="time">${time}</div></div></div>`;
       }).join('') || '<p style="text-align:center;color:#999;">还没有消息</p>';
       cont.scrollTop = cont.scrollHeight;
-    } catch (e) {
-      cont.innerHTML = `<p style="color:#c62828;text-align:center;">加载失败：${e.message}</p>`;
-    }
+    } catch (e) { cont.innerHTML = `<p style="color:#c62828;text-align:center;">加载失败：${e.message}</p>`; }
   }
-
   _esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   openGlobe() {
@@ -406,7 +352,6 @@ class HuaXiaApp {
     document.body.appendChild(ov);
     this._renderMap();
   }
-
   _renderMap() {
     const map = document.getElementById('map');
     const w = 1000, h = 600;
@@ -435,7 +380,6 @@ class HuaXiaApp {
     document.getElementById('vc-start').onclick = () => { const r = document.getElementById('vc-room').value.trim(); if (!r) return alert('请输入房间号'); this.launchJitsi(r, document.getElementById('vc-name').value || '老师', true); ov.remove(); };
     document.getElementById('vc-join').onclick = () => { const r = document.getElementById('vc-room').value.trim(); if (!r) return alert('请输入房间号'); this.launchJitsi(r, '学生', false); ov.remove(); };
   }
-
   launchJitsi(roomName, name, isMod) {
     const c = document.createElement('div');
     c.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#000;';
