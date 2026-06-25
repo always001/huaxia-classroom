@@ -118,22 +118,61 @@ class HuaXiaApp {
   }
 
   // ✅ 立即上传一条
-  _uploadVisit(record) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const cfg = window.GH.cfg;
-        if (!cfg.user || !cfg.token) return reject('未配置');
-        const issue = await this._getTodayIssue();
-        if (!issue) {
-          // 没有缓存的 Issue，存到 pending
-          this._savePending(record);
-          return resolve();
-        }
-        await this._uploadOne(record, issue.number);
-        resolve();
-      } catch (e) { reject(e); }
-    });
-  }
+_uploadVisit(record) {
+  // 用 async/await 写法，避免 Promise 嵌套混乱
+  return (async () => {
+    const cfg = window.GH.cfg || {};
+    console.log('🚀 [访问记录] 开始上传:', record.ip, record.country);
+    
+    if (!cfg.user || !cfg.token) {
+      console.warn('⚠️ [访问记录] GitHub 未配置');
+      this._savePending(record);
+      return;
+    }
+    
+    let issue;
+    try {
+      issue = await this._getTodayIssue();
+      console.log('📌 [访问记录] Issue:', issue);
+    } catch (e) {
+      console.error('❌ [访问记录] 获取 Issue 失败:', e.message);
+      this._savePending(record);
+      return;
+    }
+    
+    if (!issue || !issue.number) {
+      console.warn('⚠️ [访问记录] Issue 不存在');
+      this._savePending(record);
+      return;
+    }
+    
+    try {
+      const url = `https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`;
+      console.log('🌐 [访问记录] POST 到:', url);
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: this._formatRecord(record) })
+      });
+      console.log('📡 [访问记录] 响应:', resp.status, resp.statusText);
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error('❌ [访问记录] 上传失败:', errText);
+        this._savePending(record);
+      } else {
+        console.log('✅ [访问记录] 上传成功！');
+      }
+    } catch (e) {
+      console.error('❌ [访问记录] 网络错误:', e.message);
+      this._savePending(record);
+    }
+  })();
+}
+
+_formatRecord(record) {
+  return `| ${record.time} | ${record.ip} | ${record.country} | ${record.region || ''} | ${record.city || ''} | ${record.ua || ''} | ${record.page || ''} |`;
+}
+
 
   async _uploadOne(record, issueNum) {
     const cfg = window.GH.cfg;
