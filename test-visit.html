@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>访问记录测试</title>
+<style>
+body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+.log { padding: 8px; margin: 4px 0; border-left: 3px solid #0f0; background: #000; padding-left: 12px; }
+.err { border-color: #f44; color: #f88; }
+.ok { border-color: #0f0; }
+.warn { border-color: #ff0; color: #ff8; }
+</style>
+</head>
+<body>
+<h1>🧪 访问记录最小化测试</h1>
+<div id="log"></div>
+<script>
+function log(msg, type='ok') {
+  const div = document.createElement('div');
+  div.className = 'log ' + type;
+  div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  document.getElementById('log').appendChild(div);
+  console.log(msg);
+}
+
+async function test() {
+  log('🧪 开始测试访问记录功能');
+  
+  // 1. 检查配置
+  const cfg = JSON.parse(localStorage.getItem('hx_gh_config') || '{}');
+  log('配置: ' + JSON.stringify({
+    user: cfg.user,
+    tokenLen: cfg.token ? cfg.token.length : 0,
+    visitRepo: cfg.visitRepo
+  }, cfg.user && cfg.token ? 'ok' : 'err'));
+  
+  if (!cfg.user || !cfg.token) {
+    log('❌ 配置不完整！请先在「⚙️ 配置」里填好 GitHub Token', 'err');
+    return;
+  }
+  
+  // 2. 测试 GitHub 连接
+  try {
+    const r = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}`, {
+      headers: { 'Authorization': `token ${cfg.token}` }
+    });
+    log('GitHub 仓库状态: ' + r.status + ' ' + (r.ok ? '✅ OK' : '❌ 失败'), r.ok ? 'ok' : 'err');
+    if (!r.ok) {
+      const txt = await r.text();
+      log('错误内容: ' + txt.substring(0, 200), 'err');
+    }
+  } catch (e) {
+    log('❌ 连接异常: ' + e.message, 'err');
+  }
+  
+  // 3. 测试 IP 获取
+  try {
+    const ipR = await fetch('https://ipwho.is/');
+    const ipD = await ipR.json();
+    log('IP 获取: ' + (ipD.ip || '失败') + ' / ' + (ipD.country || ''), ipD.ip ? 'ok' : 'err');
+  } catch (e) {
+    log('❌ IP 获取失败: ' + e.message, 'err');
+  }
+  
+  // 4. 测试创建 Issue
+  const today = new Date().toISOString().slice(0, 10);
+  const issueTitle = '访客记录 ' + today;
+  try {
+    log('查找今日 Issue...');
+    const findR = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues?labels=visitor-log&state=open&per_page=10`, {
+      headers: { 'Authorization': `token ${cfg.token}` }
+    });
+    const issues = await findR.json();
+    let issue = issues.find(i => i.title === issueTitle);
+    
+    if (issue) {
+      log('找到今日 Issue: #' + issue.number, 'ok');
+    } else {
+      log('今日 Issue 不存在，正在创建...');
+      const cR = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues`, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: issueTitle, body: '# ' + today, labels: ['visitor-log'] })
+      });
+      if (cR.ok) {
+        const cD = await cR.json();
+        issue = cD;
+        log('✅ 创建 Issue 成功: #' + issue.number, 'ok');
+      } else {
+        log('❌ 创建 Issue 失败: ' + cR.status + ' ' + (await cR.text()).substring(0, 200), 'err');
+        return;
+      }
+    }
+    
+    // 5. 添加评论
+    log('添加访问记录...');
+    const now = new Date().toISOString();
+    const body = '| ' + now + ' | TEST | 测试 | 测试 | | | / |';
+    const aR = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`, {
+      method: 'POST',
+      headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body })
+    });
+    if (aR.ok) {
+      log('✅ 添加评论成功！', 'ok');
+      log('🎉 访问记录功能完全正常！', 'ok');
+    } else {
+      log('❌ 添加评论失败: ' + aR.status + ' ' + (await aR.text()).substring(0, 200), 'err');
+    }
+  } catch (e) {
+    log('❌ 异常: ' + e.message, 'err');
+  }
+  
+  log('========== 测试完成 ==========', 'ok');
+}
+
+test();
+</script>
+</body>
+</html>
