@@ -38,62 +38,108 @@ window.COUNTRIES = {
   'AU': { name: '澳大利亚', flag: '🇦🇺', x: 830, y: 520 }
 };
 
-// ✨ 终极 GeoIP - 3 重 fallback + 超时，绝不卡死
+// ✨ 全新的 IP 获取工具（3 重 fallback，确保全球可用）
 window.GeoIP = {
+  // 主：ipwho.is（全球通）
   async _tryIpWhoIs() {
-    return new Promise((resolve, reject) => {
-      const c = new AbortController();
-      const t = setTimeout(() => { c.abort(); reject(new Error('超时')); }, 4000);
-      fetch('https://ipwho.is/', { signal: c.signal })
-        .then(r => { clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(d => {
-          if (d.success === false) reject(new Error('失败'));
-          else resolve({ ip: d.ip, country: d.country || '未知', region: d.region || '', city: d.city || '' });
-        })
-        .catch(e => { clearTimeout(t); reject(e); });
-    });
+    const r = await this._fetch('https://ipwho.is/', {}, 5000);
+    const d = JSON.parse(r);
+    if (d.success === false) throw new Error('ipwho.is 返回失败');
+    return {
+      ip: d.ip,
+      country: d.country || '未知',
+      country_code: d.country_code || '',
+      region: d.region || '',
+      city: d.city || ''
+    };
   },
+  // 备：ip-api.com（全球通，无需 key）
   async _tryIpApi() {
-    return new Promise((resolve, reject) => {
-      const c = new AbortController();
-      const t = setTimeout(() => { c.abort(); reject(new Error('超时')); }, 4000);
-      fetch('http://ip-api.com/json/?lang=zh-CN', { signal: c.signal })
-        .then(r => { clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(d => {
-          if (d.status !== 'success') reject(new Error('失败'));
-          else resolve({ ip: d.query, country: d.country || '未知', region: d.regionName || '', city: d.city || '' });
-        })
-        .catch(e => { clearTimeout(t); reject(e); });
-    });
+    const r = await this._fetch('http://ip-api.com/json/?lang=zh-CN', {}, 5000);
+    const d = JSON.parse(r);
+    if (d.status !== 'success') throw new Error('ip-api 返回失败');
+    return {
+      ip: d.query,
+      country: d.country || '未知',
+      country_code: d.countryCode || '',
+      region: d.regionName || '',
+      city: d.city || ''
+    };
   },
+  // 备：ipapi.co（兼容旧代码，可能在某些国家不通）
   async _tryIpApiCo() {
-    return new Promise((resolve, reject) => {
-      const c = new AbortController();
-      const t = setTimeout(() => { c.abort(); reject(new Error('超时')); }, 4000);
-      fetch('https://ipapi.co/json/', { signal: c.signal })
-        .then(r => { clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(d => resolve({ ip: d.ip, country: d.country_name || '未知', region: d.region || '', city: d.city || '' }))
-        .catch(e => { clearTimeout(t); reject(e); });
-    });
+    const r = await this._fetch('https://ipapi.co/json/', {}, 5000);
+    const d = JSON.parse(r);
+    return {
+      ip: d.ip,
+      country: d.country_name || '未知',
+      country_code: d.country_code || '',
+      region: d.region || '',
+      city: d.city || ''
+    };
   },
+  // 终极：返回未知（保证不卡死）
   _fallback() {
-    return { ip: '未知', country: '未知', region: '', city: '' };
+    return {
+      ip: '未知',
+      country: '未知',
+      country_code: '',
+      region: '',
+      city: ''
+    };
   },
+  // 自动尝试多个源
   async get() {
-    for (const src of [() => this._tryIpWhoIs(), () => this._tryIpApi(), () => this._tryIpApiCo()]) {
+    const sources = [
+      () => this._tryIpWhoIs(),
+      () => this._tryIpApi(),
+      () => this._tryIpApiCo()
+    ];
+    for (const src of sources) {
       try {
         const r = await src();
         if (r && r.country && r.country !== '未知') return r;
-      } catch (e) { console.warn('IP 源失败:', e.message); }
+      } catch (e) {
+        console.warn('IP 源失败，尝试下一个:', e.message);
+      }
     }
     return this._fallback();
+  },
+  _fetch(url, options = {}, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const controller = new AbortController();
+      const tid = setTimeout(() => { controller.abort(); reject(new Error('超时')); }, timeout);
+      fetch(url, { ...options, signal: controller.signal })
+        .then(r => {
+          clearTimeout(tid);
+          if (!r.ok) { reject(new Error('HTTP ' + r.status)); return; }
+          return r.text();
+        })
+        .then(t => { clearTimeout(tid); resolve(t); })
+        .catch(e => { clearTimeout(tid); reject(e); });
+    });
   }
 };
 
+// GitHub 配置（保持之前完善版）
 window.GH = {
   get cfg() { return JSON.parse(localStorage.getItem('hx_gh_config') || '{}'); },
   set cfg(v) { localStorage.setItem('hx_gh_config', JSON.stringify(v)); },
-  hasAuth() { return !!(this.cfg.user && this.cfg.token && this.cfg.chatRepo && this.cfg.visitRepo); }
+  hasAuth() { return !!(this.cfg.user && this.cfg.token && this.cfg.chatRepo && this.cfg.visitRepo); },
+  _fetch(url, options = {}) {
+    return new Promise((resolve, reject) => {
+      const controller = new AbortController();
+      const tid = setTimeout(() => { controller.abort(); reject(new Error('请求超时')); }, 15000);
+      fetch(url, { ...options, signal: controller.signal })
+        .then(r => {
+          clearTimeout(tid);
+          if (!r.ok) { reject(new Error('HTTP ' + r.status)); return; }
+          return r.text();
+        })
+        .then(t => { clearTimeout(tid); resolve(t); })
+        .catch(e => { clearTimeout(tid); reject(e); });
+    });
+  }
 };
 </script>
 
@@ -178,76 +224,29 @@ window.GH = {
 </style>
 </head>
 <body>
-<!-- ✨ 不再显示"正在加载中"，默认显示一个骨架 -->
-<div id="app">
-  <div class="home-header">
-    <h1>🏮 华夏小课堂</h1>
-    <p style="margin:12px 0 0;opacity:0.95;">读中国故事 · 传中华文化</p>
-  </div>
-</div>
+<div id="app">正在加载中...</div>
 <div id="tts-status" class="tts-status" style="display:none;">🔊 朗读中...</div>
 
 <script>
-// ===== TTS 引擎（异步，不阻塞）=====
 class HuaXiaTTS {
-  constructor() {
-    this.synth = window.speechSynthesis;
-    this.voice = null;
-    this.ready = false;
-    this.statusEl = document.getElementById('tts-status');
-
-    // ✨ 立即检测，不等待 voiceschanged
-    this._tryInit();
-
-    // 同时监听事件作为后备
-    if (this.synth.onvoiceschanged !== undefined) {
-      this.synth.addEventListener('voiceschanged', () => this._tryInit());
-    }
-    // 3 秒后强制检查
-    setTimeout(() => this._tryInit(), 1000);
-    setTimeout(() => this._tryInit(), 3000);
+  constructor() { this.synth = window.speechSynthesis; this.voice = null; this.ready = false; this.onReadyCallbacks = []; this.statusEl = document.getElementById('tts-status'); this._init(); }
+  _init() {
+    const load = () => { const voices = this.synth.getVoices(); if (!voices.length) return false; this.voice = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name)) || voices.find(v => /zh/i.test(v.lang)); this.ready = !!this.voice; if (this.ready) { this.onReadyCallbacks.forEach(cb => cb()); this.onReadyCallbacks = []; } return this.ready; };
+    if (!load()) { this.synth.addEventListener('voiceschanged', load); let n = 0; const t = setInterval(() => { if (load() || ++n > 20) clearInterval(t); }, 200); }
   }
-  _tryInit() {
-    try {
-      const voices = this.synth.getVoices();
-      if (!voices.length) return;
-      this.voice = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name))
-                 || voices.find(v => /zh/i.test(v.lang));
-      if (this.voice) this.ready = true;
-    } catch (e) { console.warn('TTS init failed:', e); }
-  }
-  speak(text, options = {}) {
-    if (!text) return;
-    if (!this.ready || !this.voice) {
-      // 尝试懒初始化
-      this._tryInit();
-      if (!this.ready) {
-        console.warn('TTS 还未就绪');
-        return;
-      }
-    }
-    try {
-      this.synth.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.voice = this.voice;
-      u.lang = this.voice.lang || 'zh-CN';
-      u.rate = options.rate ?? 0.85;
-      if (this.statusEl) this.statusEl.style.display = 'block';
-      u.onend = u.onerror = () => { if (this.statusEl) this.statusEl.style.display = 'none'; if (options.onEnd) options.onEnd(); };
-      this.synth.speak(u);
-    } catch (e) { console.warn('TTS speak failed:', e); }
-  }
-  stop() { try { this.synth.cancel(); } catch (e) {} if (this.statusEl) this.statusEl.style.display = 'none'; }
+  onReady(cb) { this.ready ? cb() : this.onReadyCallbacks.push(cb); }
+  speak(text, options = {}) { if (!text) return; if (!this.ready) { this.onReady(() => this._speakNow(text, options)); return; } this._speakNow(text, options); }
+  _speakNow(text, options = {}) { this.synth.cancel(); const u = new SpeechSynthesisUtterance(text); u.voice = this.voice; u.lang = this.voice.lang || 'zh-CN'; u.rate = options.rate ?? 0.85; if (this.statusEl) this.statusEl.style.display = 'block'; u.onend = u.onerror = () => { if (this.statusEl) this.statusEl.style.display = 'none'; if (options.onEnd) options.onEnd(); }; this.synth.speak(u); }
+  stop() { this.synth.cancel(); if (this.statusEl) this.statusEl.style.display = 'none'; }
 }
 
-// ===== 田字格 =====
 class TianZiGe {
   constructor(char, pinyin = '') { this.char = char; this.pinyin = pinyin; }
   render(container) {
     const word = document.createElement('div'); word.className = 'tianzige-word'; word.title = '点我读：' + this.char;
     const py = document.createElement('div'); py.className = 'pinyin-text'; py.textContent = this.pinyin || ' '; word.appendChild(py);
     const cell = document.createElement('div'); cell.className = 'tianzige-cell'; cell.textContent = this.char; word.appendChild(cell);
-    word.onclick = e => { e.stopPropagation(); cell.classList.add('highlight'); setTimeout(() => cell.classList.remove('highlight'), 600); window.tts && window.tts.speak(this.char); };
+    word.onclick = e => { e.stopPropagation(); cell.classList.add('highlight'); setTimeout(() => cell.classList.remove('highlight'), 600); window.tts.speak(this.char); };
     container.appendChild(word); return word;
   }
 }
@@ -278,36 +277,31 @@ class PinyinLine {
   }
 }
 
-// ===== 主应用 =====
 class HuaXiaApp {
   init() {
-    // ✨ 立即渲染首页（不等任何东西）
-    this.renderHome();
-
-    // 异步：后台获取 IP
-    setTimeout(() => this._logVisit(), 100);
+    this._logVisit();  // 异步，不阻塞
+    this.renderHome(); // 立即渲染
   }
 
+  // ✨ 改用 3 重 fallback 的 GeoIP，绝不卡死
   async _logVisit() {
     try {
-      const loc = await Promise.race([
-        window.GeoIP.get(),
-        new Promise(r => setTimeout(() => r({ ip: '超时', country: '未知', region: '', city: '' }), 5000))
-      ]);
+      const loc = await window.GeoIP.get();
       localStorage.setItem('hx_my_loc', JSON.stringify(loc));
-      // 显示位置
-      const el = document.getElementById('my-location');
-      if (el) el.textContent = loc.country === '未知' ? '🌍 位置暂不可用' : `🌍 ${loc.country}${loc.region ? '·' + loc.region : ''}${loc.city ? '·' + loc.city : ''}`;
-
-      // 上传 GitHub（如果有配置）
+      // 上传到 GitHub（如果有配置）
       if (window.GH && window.GH.hasAuth()) {
         try {
           const v = new GitHubVisitor(window.GH.cfg.user, window.GH.cfg.token, window.GH.cfg.visitRepo);
           await v.log({ time: new Date().toISOString(), ip: loc.ip, country: loc.country, region: loc.region, city: loc.city, ua: navigator.userAgent.substring(0, 60), page: '/' });
-        } catch (e) { /* 上传失败不影响显示 */ }
+        } catch (e) { console.warn('上传访问记录失败:', e); }
       }
+      // 更新页面位置显示
+      const el = document.getElementById('my-location');
+      if (el) el.textContent = `🌍 ${loc.country}${loc.region ? '·' + loc.region : ''}${loc.city ? '·' + loc.city : ''}`;
     } catch (e) {
-      console.warn('Log visit failed:', e);
+      console.warn('IP获取失败:', e);
+      const el = document.getElementById('my-location');
+      if (el) el.textContent = '🌍 位置获取中...';
     }
   }
 
@@ -318,7 +312,7 @@ class HuaXiaApp {
         <p style="margin:12px 0 0;opacity:0.95;">读中国故事 · 传中华文化</p>
         <button class="welcome-btn" id="welcome-btn">🔊 点我听介绍</button>
       </div>
-      <div style="text-align:center;padding:8px 20px;font-size:13px;color:#666;" id="my-location">🌍 正在定位...</div>
+      <div style="text-align:center;padding:8px 20px;font-size:13px;color:#666;" id="my-location">🌍 位置获取中...</div>
       <div class="quick-actions">
         <button class="qa-btn" onclick="app.openSetup()">⚙️ 配置</button>
         <button class="qa-btn" onclick="app.openVideo()">📹 视频课堂</button>
@@ -330,7 +324,11 @@ class HuaXiaApp {
       <div class="categories" id="categories"></div>
       <footer style="text-align:center;padding:30px;color:#888;font-size:13px;">🌟 华夏小课堂 · <a href="admin/" style="color:#5e35b1;">教师后台</a></footer>
     `;
-    document.getElementById('welcome-btn').onclick = () => { if (window.tts) window.tts.speak('你好小朋友，欢迎来到华夏小课堂！'); };
+    document.getElementById('welcome-btn').onclick = () => { if (window.tts && window.tts.ready) window.tts.speak('你好小朋友，欢迎来到华夏小课堂！'); };
+
+    const loc = JSON.parse(localStorage.getItem('hx_my_loc') || 'null');
+    const locEl = document.getElementById('my-location');
+    if (locEl && loc) locEl.textContent = `🌍 ${loc.country}${loc.region ? '·' + loc.region : ''}${loc.city ? '·' + loc.city : ''}`;
 
     const cats = [
       { id: 'festivals', name: '传统节日', icon: '🎊', color: '#e74c3c' },
@@ -358,7 +356,7 @@ class HuaXiaApp {
     const ov = document.createElement('div');
     ov.className = 'modal-overlay';
     ov.onclick = e => { if (e.target === ov) ov.remove(); };
-    ov.innerHTML = `<div class="modal" style="max-width:560px;"><h2>⚙️ GitHub 配置</h2><div style="background:#fff3e0;padding:12px;border-radius:8px;margin-bottom:12px;font-size:12px;color:#666;">配置后即可启用跨境聊天 + 访问记录</div><input id="cfg-user" placeholder="GitHub 用户名" value="${cfg.user || ''}"><input id="cfg-token" type="password" placeholder="Token (ghp_...)" value="${cfg.token || ''}"><input id="cfg-chat-repo" placeholder="聊天仓库" value="${cfg.chatRepo || 'hx-chat-data'}"><input id="cfg-visit-repo" placeholder="访问仓库" value="${cfg.visitRepo || 'hx-visitor-data'}"><button class="btn btn-primary" id="cfg-save">💾 保存</button><button class="btn btn-success" id="cfg-test">🧪 测试</button><button class="btn btn-secondary" id="cfg-close">关闭</button><p id="cfg-msg" style="margin-top:10px;font-size:13px;"></p></div>`;
+    ov.innerHTML = `<div class="modal" style="max-width:560px;"><h2>⚙️ GitHub 配置</h2><div style="background:#fff3e0;padding:12px;border-radius:8px;margin-bottom:12px;font-size:12px;color:#666;">配置后，您的网站就能：<br>✓ 💬 跨境聊天<br>✓ 📊 自动上传访问记录</div><input id="cfg-user" placeholder="GitHub 用户名" value="${cfg.user || ''}"><input id="cfg-token" type="password" placeholder="Token (ghp_...)" value="${cfg.token || ''}"><input id="cfg-chat-repo" placeholder="聊天仓库" value="${cfg.chatRepo || 'hx-chat-data'}"><input id="cfg-visit-repo" placeholder="访问仓库" value="${cfg.visitRepo || 'hx-visitor-data'}"><button class="btn btn-primary" id="cfg-save">💾 保存</button><button class="btn btn-success" id="cfg-test">🧪 测试</button><button class="btn btn-secondary" id="cfg-close">关闭</button><p id="cfg-msg" style="margin-top:10px;font-size:13px;"></p></div>`;
     document.body.appendChild(ov);
     document.getElementById('cfg-close').onclick = () => ov.remove();
     document.getElementById('cfg-save').onclick = () => {
@@ -399,7 +397,7 @@ class HuaXiaApp {
     const ov = document.createElement('div');
     ov.className = 'modal-overlay';
     ov.onclick = e => { if (e.target === ov) ov.remove(); };
-    ov.innerHTML = `<div class="modal" style="max-width:560px;"><h2>💬 跨境聊天</h2><p style="color:#666;font-size:13px;margin-bottom:12px;">基于 GitHub Issues，0 成本、跨境。</p><input id="ch-name" placeholder="您的姓名" value="${myName}"><input id="ch-room" placeholder="房间号" value="${myRoom}"><select id="ch-country"><option value="🇨🇳">🇨🇳 中国</option><option value="🇯🇵">🇯🇵 日本</option><option value="🇰🇷">🇰🇷 韩国</option><option value="🇸🇬">🇸🇬 新加坡</option><option value="🇺🇸">🇺🇸 美国</option><option value="🇬🇧">🇬🇧 英国</option><option value="🇫🇷">🇫🇷 法国</option><option value="🇦🇺">🇦🇺 澳大利亚</option></select><button class="btn btn-primary" id="ch-enter">进入</button><button class="btn btn-secondary" id="ch-close">关闭</button></div>`;
+    ov.innerHTML = `<div class="modal" style="max-width:560px;"><h2>💬 跨境聊天</h2><p style="color:#666;font-size:13px;margin-bottom:12px;">基于 GitHub Issues，0 成本、跨境、永久。</p><input id="ch-name" placeholder="您的姓名" value="${myName}"><input id="ch-room" placeholder="房间号" value="${myRoom}"><select id="ch-country"><option value="🇨🇳">🇨🇳 中国</option><option value="🇯🇵">🇯🇵 日本</option><option value="🇰🇷">🇰🇷 韩国</option><option value="🇸🇬">🇸🇬 新加坡</option><option value="🇺🇸">🇺🇸 美国</option><option value="🇬🇧">🇬🇧 英国</option><option value="🇫🇷">🇫🇷 法国</option><option value="🇦🇺">🇦🇺 澳大利亚</option></select><button class="btn btn-primary" id="ch-enter">进入</button><button class="btn btn-secondary" id="ch-close">关闭</button></div>`;
     document.body.appendChild(ov);
     document.getElementById('ch-country').value = myCountry;
     document.getElementById('ch-close').onclick = () => ov.remove();
@@ -538,13 +536,7 @@ class HuaXiaApp {
       list.appendChild(card);
     });
   }
-  async loadIndex(cat) {
-    try {
-      const r = await fetch(`content/${cat}/index.json?_=${Date.now()}`);
-      if (r.ok) return await r.json();
-    } catch (e) {}
-    return { festivals: [{ id: 'duanwu', title: '端午节', icon: '🐉' }] }[cat] || [];
-  }
+  async loadIndex(cat) { try { const r = await fetch(`content/${cat}/index.json?_=${Date.now()}`); if (r.ok) return await r.json(); } catch (e) {} return { festivals: [{ id: 'duanwu', title: '端午节', icon: '🐉' }] }[cat] || []; }
   async openArticle(cat, id) {
     try {
       const r = await fetch(`content/${cat}/${id}.json?_=${Date.now()}`);
@@ -564,26 +556,17 @@ class HuaXiaApp {
   }
 }
 
+// GitHubChat & GitHubVisitor 类（保持之前完善版本）
 class GitHubChat {
   constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
   get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
   headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
-  _fetch(url, options = {}) {
-    return new Promise((resolve, reject) => {
-      const c = new AbortController();
-      const t = setTimeout(() => { c.abort(); reject(new Error('超时')); }, 12000);
-      fetch(url, { ...options, signal: c.signal })
-        .then(r => { clearTimeout(t); if (!r.ok) { reject(new Error('HTTP ' + r.status)); return; } return r.text(); })
-        .then(t2 => { clearTimeout(t); resolve(t2); })
-        .catch(e => { clearTimeout(t); reject(e); });
-    });
-  }
   async getRoomIssue(roomId) {
-    const r = await this._fetch(`${this.base}/issues?labels=chat-room&state=open&per_page=100`, { headers: this.headers() });
+    const r = await window.GH._fetch(`${this.base}/issues?labels=chat-room&state=open&per_page=100`, { headers: this.headers() });
     const issues = JSON.parse(r);
     let issue = issues.find(i => i.title === `[Chat] ${roomId}`);
     if (!issue) {
-      const cr = await this._fetch(`${this.base}/issues`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ title: `[Chat] ${roomId}`, body: `房间：${roomId}`, labels: ['chat-room'] }) });
+      const cr = await window.GH._fetch(`${this.base}/issues`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ title: `[Chat] ${roomId}`, body: `房间号：${roomId}`, labels: ['chat-room'] }) });
       issue = JSON.parse(cr);
     }
     return issue;
@@ -591,11 +574,11 @@ class GitHubChat {
   async sendMessage(roomId, from, country, text) {
     const issue = await this.getRoomIssue(roomId);
     const body = `**${country} ${from}** · ${new Date().toLocaleString('zh-CN')}\n\n${text}`;
-    await this._fetch(`${this.base}/issues/${issue.number}/comments`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ body }) });
+    await window.GH._fetch(`${this.base}/issues/${issue.number}/comments`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ body }) });
   }
   async getMessages(roomId) {
     const issue = await this.getRoomIssue(roomId);
-    const r = await this._fetch(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
+    const r = await window.GH._fetch(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
     const comments = JSON.parse(r);
     return comments.map(c => {
       const m = c.body.match(/^\*\*([\u{1F000}-\u{1FFFF}\u{1F300}-\u{1F9FF}]*?)\s*([^*]+?)\*\*\s*·\s*([\s\S]*?)\n\n([\s\S]*)$/u);
@@ -609,28 +592,18 @@ class GitHubVisitor {
   constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
   get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
   headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
-  _fetch(url, options = {}) {
-    return new Promise((resolve, reject) => {
-      const c = new AbortController();
-      const t = setTimeout(() => { c.abort(); reject(new Error('超时')); }, 12000);
-      fetch(url, { ...options, signal: c.signal })
-        .then(r => { clearTimeout(t); if (!r.ok) { reject(new Error('HTTP ' + r.status)); return; } return r.text(); })
-        .then(t2 => { clearTimeout(t); resolve(t2); })
-        .catch(e => { clearTimeout(t); reject(e); });
-    });
-  }
   async log(record) {
     const date = new Date().toISOString().slice(0, 10);
     const issueTitle = `访客记录 ${date}`;
-    const r = await this._fetch(`${this.base}/issues?labels=visitor-log&state=open&per_page=100`, { headers: this.headers() });
+    const r = await window.GH._fetch(`${this.base}/issues?labels=visitor-log&state=open&per_page=100`, { headers: this.headers() });
     const issues = r ? JSON.parse(r) : [];
     let issue = issues.find(i => i.title === issueTitle);
     if (!issue) {
-      const cr = await this._fetch(`${this.base}/issues`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ title: issueTitle, body: `# ${date}`, labels: ['visitor-log'] }) });
+      const cr = await window.GH._fetch(`${this.base}/issues`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ title: issueTitle, body: `# ${date} 访客日志`, labels: ['visitor-log'] }) });
       issue = JSON.parse(cr);
     }
     const body = `| 时间 | IP | 国家 | 地区 | 城市 | UA | 页面 |\n|---|---|---|---|---|---|---|\n| ${record.time} | ${record.ip} | ${record.country} | ${record.region || ''} | ${record.city || ''} | ${record.ua || ''} | ${record.page || ''} |`;
-    await this._fetch(`${this.base}/issues/${issue.number}/comments`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ body }) });
+    await window.GH._fetch(`${this.base}/issues/${issue.number}/comments`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ body }) });
   }
 }
 
@@ -655,11 +628,11 @@ class ArticleRenderer {
   }
   _render(block, parent) {
     const div = document.createElement('div'); div.className = `block block-${block.type}`; div.dataset.text = block.text || block.content || '';
-    if (block.type === 'paragraph' || block.type === 'story') { new PinyinLine(block.text).render(div); div.onclick = () => window.tts && window.tts.speak(block.text); }
-    else if (block.type === 'dialogue') { div.style.cssText = 'background:#e3f2fd;border-left:4px solid #2196f3;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;'; div.innerHTML = `<strong style="color:#1976d2;font-size:18px;">💬 ${block.speaker}：</strong>`; new PinyinLine(block.text).render(div); div.onclick = () => window.tts && window.tts.speak(block.text); }
+    if (block.type === 'paragraph' || block.type === 'story') { new PinyinLine(block.text).render(div); div.onclick = () => window.tts.speak(block.text); }
+    else if (block.type === 'dialogue') { div.style.cssText = 'background:#e3f2fd;border-left:4px solid #2196f3;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;'; div.innerHTML = `<strong style="color:#1976d2;font-size:18px;">💬 ${block.speaker}：</strong>`; new PinyinLine(block.text).render(div); div.onclick = () => window.tts.speak(block.text); }
     else if (block.type === 'image') { div.classList.add('block-image'); div.innerHTML = `<div style="font-size:100px;">${block.icon || '🎨'}</div><div style="color:#666;font-style:italic;margin-top:8px;">${block.caption || ''}</div>`; }
-    else if (block.type === 'knowledge') { div.style.cssText = 'background:#fff3e0;border-left:4px solid #ff9800;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;'; const h = document.createElement('h3'); h.style.cssText = 'color:#e65100;margin:0 0 12px;'; h.textContent = block.title || '📚 文化小知识'; div.appendChild(h); const ul = document.createElement('ul'); ul.style.cssText = 'margin:0;padding-left:20px;'; (block.items || []).forEach(it => { const li = document.createElement('li'); li.style.cssText = 'margin:8px 0;line-height:1.7;'; li.textContent = it; ul.appendChild(li); }); div.appendChild(ul); div.onclick = () => window.tts && window.tts.speak((block.items || []).join('。')); }
-    else if (block.type === 'poem') { div.style.cssText = 'background:#f3e5f5;border-left:4px solid #9c27b0;border-radius:14px;padding:20px;margin:16px 0;cursor:pointer;'; const h = document.createElement('h3'); h.style.cssText = 'color:#6a1b9a;margin:0 0 16px;'; h.textContent = '📜 ' + (block.title || '古诗欣赏'); div.appendChild(h); const pre = document.createElement('div'); pre.className = 'poem-content'; pre.textContent = block.content; div.appendChild(pre); if (block.author) { const a = document.createElement('div'); a.className = 'poem-author'; a.textContent = '—— ' + block.author; div.appendChild(a); } div.onclick = () => window.tts && window.tts.speak(block.content.replace(/\n/g, '。')); }
+    else if (block.type === 'knowledge') { div.style.cssText = 'background:#fff3e0;border-left:4px solid #ff9800;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;'; const h = document.createElement('h3'); h.style.cssText = 'color:#e65100;margin:0 0 12px;'; h.textContent = block.title || '📚 文化小知识'; div.appendChild(h); const ul = document.createElement('ul'); ul.style.cssText = 'margin:0;padding-left:20px;'; (block.items || []).forEach(it => { const li = document.createElement('li'); li.style.cssText = 'margin:8px 0;line-height:1.7;'; li.textContent = it; ul.appendChild(li); }); div.appendChild(ul); div.onclick = () => window.tts.speak((block.items || []).join('。')); }
+    else if (block.type === 'poem') { div.style.cssText = 'background:#f3e5f5;border-left:4px solid #9c27b0;border-radius:14px;padding:20px;margin:16px 0;cursor:pointer;'; const h = document.createElement('h3'); h.style.cssText = 'color:#6a1b9a;margin:0 0 16px;'; h.textContent = '📜 ' + (block.title || '古诗欣赏'); div.appendChild(h); const pre = document.createElement('div'); pre.className = 'poem-content'; pre.textContent = block.content; div.appendChild(pre); if (block.author) { const a = document.createElement('div'); a.className = 'poem-author'; a.textContent = '—— ' + block.author; div.appendChild(a); } div.onclick = () => window.tts.speak(block.content.replace(/\n/g, '。')); }
     else if (block.type === 'vocabulary') {
       div.className = 'block block-vocabulary';
       div.style.cssText = 'background:#e8f5e9;border-left:4px solid #4caf50;border-radius:14px;padding:20px;margin:16px 0;';
@@ -668,24 +641,23 @@ class ArticleRenderer {
       const grid = document.createElement('div'); grid.className = 'vocab-grid';
       (block.words || []).forEach(w => { let dp = w.pinyin || ''; if (w.pinyin && w.tone) dp = window.toTonedPinyin(w.pinyin, w.tone); new TianZiGe(w.char, dp).render(grid); });
       div.appendChild(grid);
-      h.onclick = e => { e.stopPropagation(); window.tts && window.tts.speak((block.words || []).map(w => w.char).join('')); };
+      h.onclick = e => { e.stopPropagation(); window.tts.speak((block.words || []).map(w => w.char).join('')); };
     }
-    else if (block.type === 'question') { div.style.cssText = 'background:#fffde7;border-left:4px solid #fbc02d;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;'; const s = document.createElement('strong'); s.style.cssText = 'color:#f57f17;display:block;margin-bottom:8px;'; s.textContent = '🤔 想一想：'; div.appendChild(s); const p = document.createElement('p'); p.style.cssText = 'font-size:18px;margin:0;color:#5d4037;'; p.textContent = block.text; div.appendChild(p); div.onclick = () => window.tts && window.tts.speak(block.text); }
+    else if (block.type === 'question') { div.style.cssText = 'background:#fffde7;border-left:4px solid #fbc02d;border-radius:14px;padding:18px;margin:16px 0;cursor:pointer;'; const s = document.createElement('strong'); s.style.cssText = 'color:#f57f17;display:block;margin-bottom:8px;'; s.textContent = '🤔 想一想：'; div.appendChild(s); const p = document.createElement('p'); p.style.cssText = 'font-size:18px;margin:0;color:#5d4037;'; p.textContent = block.text; div.appendChild(p); div.onclick = () => window.tts.speak(block.text); }
     parent.appendChild(div);
   }
   async _playAll() {
-    if (window.tts) window.tts.stop();
+    window.tts.stop();
     const blocks = document.querySelectorAll('.article-main .block-paragraph, .article-main .block-story, .article-main .block-dialogue, .article-main .block-knowledge, .article-main .block-poem, .article-main .block-question');
     for (const b of blocks) {
       const text = b.dataset.text; if (!text) continue;
       b.style.background = '#fff9c4'; b.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await new Promise(r => window.tts && window.tts.speak(text, { onEnd: r, rate: 0.85 }));
+      await new Promise(r => window.tts.speak(text, { onEnd: r, rate: 0.85 }));
       b.style.background = ''; await new Promise(r => setTimeout(r, 500));
     }
   }
 }
 
-// ✨ 启动 - 立即执行
 window.tts = new HuaXiaTTS();
 window.app = new HuaXiaApp();
 window.app.init();
