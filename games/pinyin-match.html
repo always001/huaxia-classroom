@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>🧩 拼音消消乐 - 华夏小课堂</title>
-<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/dist/index.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -36,10 +35,12 @@
   }
   .score-box .label { font-size: 12px; color: #888; }
   .score-box .value { font-size: 24px; font-weight: bold; color: #e65100; }
+
   .instruction {
     background: #e3f2fd; padding: 12px 16px; border-radius: 12px;
     margin-bottom: 20px; color: #1976d2; font-size: 14px;
   }
+
   .word-pool {
     display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
     min-height: 80px; padding: 12px; background: #fafafa;
@@ -67,23 +68,20 @@
   .card.matched { opacity: 0.3; pointer-events: none; animation: fadeOut 0.5s; }
   @keyframes fadeOut { to { transform: scale(0.8); } }
   .card:hover:not(.matched) { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+
   .restart-btn {
     display: block; margin: 20px auto; padding: 12px 32px;
     background: linear-gradient(135deg, #e74c3c, #c0392b);
-    color: white; border: none; border-radius: 24px; cursor: pointer;
-    font-size: 16px; font-weight: bold;
+    color: white; border: none; border-radius: 24px;
+    cursor: pointer; font-size: 16px; font-weight: bold;
   }
   .restart-btn:hover { transform: scale(1.05); }
+
   .win-banner {
-    display: none; text-align: center; padding: 30px;
+    display: none; text-align: center; padding: 20px;
     background: linear-gradient(135deg, #ffd700, #ff8c00);
-    color: white; border-radius: 16px; margin-bottom: 20px;
-    font-size: 24px; font-weight: bold;
-    animation: bounce 1s;
-  }
-  @keyframes bounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+    color: white; border-radius: 12px; margin-bottom: 20px;
+    font-size: 22px; font-weight: bold;
   }
 </style>
 </head>
@@ -104,7 +102,7 @@
   </div>
 
   <div class="instruction">
-    👉 点一个<strong style="color:#e65100;">汉字</strong>，再点对应的<strong style="color:#01579b;">拼音</strong>，配对成功就消失！<br>
+    👉 点一个<strong>汉字</strong>，再点对应的<strong>拼音</strong>，配对成功就消失！<br>
     👉 点汉字可以听发音 💡
   </div>
 
@@ -115,13 +113,175 @@
 </div>
 
 <script>
-// ====== TTS ======
+// ===== 修复：拼音库（带声调数字 + 不带调两种形式都支持匹配）=====
+const WORDS = [
+  { hz: '节', py: 'jie2' }, { hz: '龙', py: 'long2' }, { hz: '风', py: 'feng1' },
+  { hz: '水', py: 'shui3' }, { hz: '春', py: 'chun1' }, { hz: '月', py: 'yue4' },
+  { hz: '雨', py: 'yu3' }, { hz: '花', py: 'hua1' },
+  { hz: '山', py: 'shan1' }, { hz: '云', py: 'yun2' },
+  { hz: '天', py: 'tian1' }, { hz: '日', py: 'ri4' },
+  { hz: '人', py: 'ren2' }, { hz: '口', py: 'kou3' },
+  { hz: '手', py: 'shou3' }, { hz: '足', py: 'zu2' },
+  { hz: '日', py: 'ri4' }, { hz: '木', py: 'mu4' },
+  { hz: '禾', py: 'he2' }, { hz: '天', py: 'tian1' },
+  { hz: '地', py: 'di4' }, { hz: '上', py: 'shang4' },
+  { hz: '下', py: 'xia4' }, { hz: '大', py: 'da4' },
+  { hz: '小', py: 'xiao3' }, { hz: '多', py: 'duo1' },
+  { hz: '少', py: 'shao3' }, { hz: '好', py: 'hao3' },
+  { hz: '坏', py: 'huai4' }, { hz: '长', py: 'chang2' },
+  { hz: '短', py: 'duan3' }, { hz: '高', py: 'gao1' },
+  { hz: '低', py: 'di1' }, { hz: '远', py: 'yuan3' },
+  { hz: '近', py: 'jin4' }, { hz: '快', py: 'kuai4' },
+  { hz: '慢', py: 'man4' }, { hz: '新', py: 'xin1' },
+  { hz: '旧', py: 'jiu4' }, { hz: '美', py: 'mei3' },
+  { hz: '丑', py: 'chou3' }, { hz: '白', py: 'bai2' },
+  { hz: '黑', py: 'hei1' }, { hz: '红', py: 'hong2' },
+  { hz: '黄', py: 'huang2' }, { hz: '蓝', py: 'lan2' },
+  { hz: '绿', py: 'lv4' }, { hz: '紫', py: 'zi3' },
+  { hz: '香', py: 'xiang1' }, { hz: '甜', py: 'tian2' },
+  { hz: '苦', py: 'ku3' }, { hz: '辣', py: 'la4' },
+  { hz: '咸', py: 'xian2' }, { hz: '酸', py: 'suan1' },
+  { hz: '金', py: 'jin1' }, { hz: '火', py: 'huo3' },
+  { hz: '土', py: 'tu3' }, { hz: '父', py: 'fu4' },
+  { hz: '母', py: 'mu3' }, { hz: '哥', py: 'ge1' },
+  { hz: '姐', py: 'jie3' }, { hz: '弟', py: 'di4' },
+  { hz: '妹', py: 'mei4' }, { hz: '爷', py: 'ye2' },
+  { hz: '奶', py: 'nai3' }, { hz: '家', py: 'jia1' },
+  { hz: '国', py: 'guo2' }, { hz: '学', py: 'xue2' },
+  { hz: '校', py: 'xiao4' }, { hz: '书', py: 'shu1' },
+  { hz: '本', py: 'ben3' }, { hz: '笔', py: 'bi3' },
+  { hz: '纸', py: 'zhi3' }, { hz: '爱', py: 'ai4' },
+  { hz: '心', py: 'xin1' }, { hz: '梦', py: 'meng4' },
+  { hz: '想', py: 'xiang3' }, { hz: '希', py: 'xi1' },
+  { hz: '望', py: 'wang4' }, { hz: '飞', py: 'fei1' },
+  { hz: '跑', py: 'pao3' }, { hz: '跳', py: 'tiao4' },
+  { hz: '游', py: 'you2' }, { hz: '玩', py: 'wan2' },
+  { hz: '笑', py: 'xiao4' }, { hz: '哭', py: 'ku1' },
+  { hz: '睡', py: 'shui4' }, { hz: '醒', py: 'xing3' },
+  { hz: '吃', py: 'chi1' }, { hz: '喝', py: 'he1' },
+  { hz: '饭', py: 'fan4' }, { hz: '茶', py: 'cha2' },
+  { hz: '鸡', py: 'ji1' }, { hz: '鸭', py: 'ya1' },
+  { hz: '鹅', py: 'e2' }, { hz: '鱼', py: 'yu2' },
+  { hz: '牛', py: 'niu2' }, { hz: '羊', py: 'yang2' },
+  { hz: '猪', py: 'zhu1' }, { hz: '马', py: 'ma3' },
+  { hz: '狗', py: 'gou3' }, { hz: '猫', py: 'mao1' },
+  { hz: '鸟', py: 'niao3' }, { hz: '虫', py: 'chong2' },
+  { hz: '草', py: 'cao3' }, { hz: '树', py: 'shu4' },
+  { hz: '森', py: 'sen1' }, { hz: '河', py: 'he2' },
+  { hz: '海', py: 'hai3' }, { hz: '江', py: 'jiang1' },
+  { hz: '湖', py: 'hu2' }, { hz: '桥', py: 'qiao2' },
+  { hz: '路', py: 'lu4' }, { hz: '车', py: 'che1' },
+  { hz: '船', py: 'chuan2' }, { hz: '云', py: 'yun2' },
+  { hz: '雪', py: 'xue3' }, { hz: '雷', py: 'lei2' },
+  { hz: '电', py: 'dian4' }, { hz: '星', py: 'xing1' },
+  { hz: '石', py: 'shi2' }, { hz: '沙', py: 'sha1' },
+  { hz: '田', py: 'tian2' }, { hz: '苗', py: 'miao2' },
+  { hz: '瓜', py: 'gua1' }, { hz: '果', py: 'guo3' },
+  { hz: '桃', py: 'tao2' }, { hz: '李', py: 'li3' },
+  { hz: '杏', py: 'xing4' }, { hz: '梨', py: 'li2' },
+  { hz: '松', py: 'song1' }, { hz: '柏', py: 'bai3' },
+  { hz: '梅', py: 'mei2' }, { hz: '兰', py: 'lan2' },
+  { hz: '菊', py: 'ju2' }, { hz: '荷', py: 'he2' },
+  { hz: '莲', py: 'lian2' }, { hz: '苹', py: 'ping2' },
+  { hz: '端', py: 'duan1' }, { hz: '午', py: 'wu3' },
+  { hz: '节', py: 'jie2' }, { hz: '粽', py: 'zong4' },
+  { hz: '舟', py: 'zhou1' }, { hz: '屈', py: 'qu1' },
+  { hz: '原', py: 'yuan2' }, { hz: '春', py: 'chun1' },
+  { hz: '年', py: 'nian2' }, { hz: '兽', py: 'shou4' },
+  { hz: '爆', py: 'bao4' }, { hz: '福', py: 'fu2' },
+  { hz: '饺', py: 'jiao3' }, { hz: '秋', py: 'qiu1' },
+  { hz: '月', py: 'yue4' }, { hz: '饼', py: 'bing3' },
+  { hz: '团', py: 'tuan2' }, { hz: '圆', py: 'yuan2' },
+  { hz: '嫦', py: 'chang2' }, { hz: '兔', py: 'tu4' },
+  { hz: '宵', py: 'xiao1' }, { hz: '灯', py: 'deng1' },
+  { hz: '谜', py: 'mi2' }, { hz: '汤', py: 'tang1' },
+  { hz: '舞', py: 'wu3' }, { hz: '清', py: 'qing1' },
+  { hz: '明', py: 'ming2' }, { hz: '花', py: 'hua1' },
+  { hz: '柳', py: 'liu3' }, { hz: '魂', py: 'hun2' },
+  { hz: '扫', py: 'sao3' }, { hz: '墓', py: 'mu4' },
+  { hz: '每', py: 'mei3' }, { hz: '农', py: 'nong2' },
+  { hz: '历', py: 'li4' }, { hz: '这', py: 'zhe4' },
+  { hz: '天', py: 'tian1' }, { hz: '包', py: 'bao1' },
+  { hz: '赛', py: 'sai4' }, { hz: '挂', py: 'gua4' },
+  { hz: '艾', py: 'ai4' }, { hz: '可', py: 'ke3' },
+  { hz: '热', py: 're4' }, { hz: '闹', py: 'nao4' },
+  { hz: '由', py: 'you2' }, { hz: '来', py: 'lai2' },
+  { hz: '知', py: 'zhi1' }, { hz: '宝', py: 'bao3' },
+  { hz: '贝', py: 'bei4' }, { hz: '爱', py: 'ai4' },
+  { hz: '美', py: 'mei3' }, { hz: '丽', py: 'li4' },
+  { hz: '梦', py: 'meng4' }, { hz: '希', py: 'xi1' },
+  { hz: '望', py: 'wang4' }, { hz: '飞', py: 'fei1' },
+  { hz: '跑', py: 'pao3' }, { hz: '跳', py: 'tiao4' },
+  { hz: '游', py: 'you2' }, { hz: '玩', py: 'wan2' },
+  { hz: '笑', py: 'xiao4' }, { hz: '哭', py: 'ku1' },
+  { hz: '睡', py: 'shui4' }, { hz: '醒', py: 'xing3' },
+  { hz: '吃', py: 'chi1' }, { hz: '喝', py: 'he1' },
+  { hz: '饭', py: 'fan4' }, { hz: '茶', py: 'cha2' },
+  { hz: '鸡', py: 'ji1' }, { hz: '鸭', py: 'ya1' },
+  { hz: '鹅', py: 'e2' }, { hz: '鱼', py: 'yu2' },
+  { hz: '牛', py: 'niu2' }, { hz: '羊', py: 'yang2' },
+  { hz: '猪', py: 'zhu1' }, { hz: '马', py: 'ma3' },
+  { hz: '狗', py: 'gou3' }, { hz: '猫', py: 'mao1' },
+  { hz: '鸟', py: 'niao3' }, { hz: '虫', py: 'chong2' },
+  { hz: '草', py: 'cao3' }, { hz: '树', py: 'shu4' },
+  { hz: '森', py: 'sen1' }, { hz: '河', py: 'he2' },
+  { hz: '海', py: 'hai3' }, { hz: '江', py: 'jiang1' },
+  { hz: '湖', py: 'hu2' }, { hz: '桥', py: 'qiao2' },
+  { hz: '路', py: 'lu4' }, { hz: '车', py: 'che1' },
+  { hz: '船', py: 'chuan2' }
+];
+
+// 声调符号表
+const TONE_MARKS = ['ā','á','ǎ','à','ō','ó','ǒ','ò','ē','é','ě','è','ī','í','ǐ','ì','ū','ú','ǔ','ù','ǖ','ǘ','ǚ','ǜ'];
+
+// ✨ 关键修复：去除声调数字，得到纯净拼音
+function stripTone(pinyin) {
+  // 把 "jie2" 变成 "jie"，"yue4" 变成 "yue"
+  return pinyin.replace(/[1-5]$/, '');
+}
+
+// ✨ 关键修复：把带声调数字的拼音转成带调符号（用于显示）
+function toDisplayPinyin(pinyin) {
+  const m = pinyin.match(/^([a-zA-ZüÜ]+)([1-5])?$/);
+  if (!m) return pinyin;
+  const base = m[1].toLowerCase();
+  const tone = m[2] ? parseInt(m[2]) : 0;
+  if (tone === 0 || tone === 5) return base;
+
+  // 韵母优先级（长的优先）
+  const finals = ['iang','uang','ueng','ai','ei','ui','ao','ou','iu','ie','ve','er','an','en','in','un','ün','ang','eng','ing','ong'];
+  for (const f of finals) {
+    if (base.includes(f)) {
+      const idx = (tone - 1) * 2;
+      const map = {
+        'a': 'āáǎà','o':'ōóǒò','e':'ēéěè','i':'īíǐì','u':'ūúǔù','ü':'ǖǘǚǜ',
+        'ai':'āi ái ǎi ài','ei':'ēi éi ěi èi','ui':'uī uí uǐ uì',
+        'ao':'āo áo ǎo ào','ou':'ōu óu ǒu òu','iu':'iū iú iǔ iù',
+        'ie':'iē ié iě iè','üe':'üē üé üě üè','er':'ēr ér ěr èr',
+        'an':'ān án ǎn àn','en':'ēn én ěn èn','in':'īn ín ǐn ìn',
+        'un':'ūn ún ǔn ùn','ün':'ǖn ǘn ǚn ǜn',
+        'ang':'āng áng ǎng àng','eng':'ēng éng ěng èng',
+        'ing':'īng íng ǐng ìng','ong':'ōng óng ǒng òng'
+      };
+      const tones = map[f];
+      if (tones) {
+        const parts = tones.split(' ');
+        if (parts[tone - 1]) return base.replace(f, parts[tone - 1]);
+      }
+      // 简化版：用 Unicode 组合字符
+      return base.replace(f, TONE_MARKS[(tone-1)*2 + 'aeiou'.indexOf(f[0])] || base);
+    }
+  }
+  return base;
+}
+
+// ===== TTS =====
 const synth = window.speechSynthesis;
 let ttsVoice = null;
 function loadVoice() {
   const voices = synth.getVoices();
-  const zh = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name));
-  ttsVoice = zh || voices.find(v => /zh/i.test(v.lang));
+  ttsVoice = voices.find(v => /zh/i.test(v.lang) && /Xiaoxiao|Mei|Ting|女|female/i.test(v.name))
+          || voices.find(v => /zh/i.test(v.lang));
 }
 loadVoice();
 if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoice;
@@ -135,14 +295,7 @@ function speak(text) {
   synth.speak(u);
 }
 
-// ====== 游戏数据 ======
-const WORDS = [
-  { hz: '春', py: 'chūn' }, { hz: '节', py: 'jié' }, { hz: '年', py: 'nián' },
-  { hz: '龙', py: 'lóng' }, { hz: '舟', py: 'zhōu' }, { hz: '月', py: 'yuè' },
-  { hz: '花', py: 'huā' }, { hz: '灯', py: 'dēng' }, { hz: '雨', py: 'yǔ' },
-  { hz: '山', py: 'shān' }, { hz: '水', py: 'shuǐ' }, { hz: '风', py: 'fēng' }
-];
-
+// ===== 游戏状态 =====
 let state = { selectedHz: null, selectedPy: null, score: 0, combo: 0, matched: 0 };
 const TOTAL = 8;
 
@@ -160,18 +313,33 @@ function initGame() {
   state = { selectedHz: null, selectedPy: null, score: 0, combo: 0, matched: 0 };
   updateScore();
 
-  const chosen = shuffle(WORDS).slice(0, TOTAL);
+  // ✨ 去重：用 Set 保证不重复（避免同一个字出现 2 次）
+  const uniqueWords = [];
+  const seen = new Set();
+  for (const w of WORDS) {
+    if (!seen.has(w.hz)) {
+      seen.add(w.hz);
+      uniqueWords.push(w);
+    }
+    if (uniqueWords.length >= 30) break; // 准备 30 个，从里面随机抽 8 个
+  }
+  const chosen = shuffle(uniqueWords).slice(0, TOTAL);
+
   const wordPool = document.getElementById('word-pool');
   const pinyinPool = document.getElementById('pinyin-pool');
-  wordPool.innerHTML = ''; pinyinPool.innerHTML = '';
+  wordPool.innerHTML = '';
+  pinyinPool.innerHTML = '';
 
   // 汉字行
   chosen.forEach((w, i) => {
     const card = document.createElement('div');
     card.className = 'card card-hanzi';
     card.textContent = w.hz;
-    card.dataset.id = i;
-    card.dataset.pinyin = w.py;
+    // ✨ 关键：存"去声调数字"版本的拼音，用于匹配
+    card.dataset.matchKey = stripTone(w.py);
+    // ✨ 显示用：带声调符号的版本
+    card.dataset.display = toDisplayPinyin(w.py);
+    card.dataset.id = 'hz-' + i;
     card.onclick = () => {
       speak(w.hz);
       document.querySelectorAll('.card-hanzi.selected').forEach(c => c.classList.remove('selected'));
@@ -182,13 +350,14 @@ function initGame() {
     wordPool.appendChild(card);
   });
 
-  // 拼音行（打乱）
-  shuffle(chosen).forEach((w, i) => {
+  // 拼音行（打乱顺序）
+  const shuffledPinyin = shuffle([...chosen]);
+  shuffledPinyin.forEach((w, i) => {
     const card = document.createElement('div');
     card.className = 'card card-pinyin';
-    card.textContent = w.py;
-    card.dataset.id = i;
-    card.dataset.pinyin = w.py;
+    card.textContent = toDisplayPinyin(w.py);
+    card.dataset.matchKey = stripTone(w.py);
+    card.dataset.id = 'py-' + i;
     card.onclick = () => {
       document.querySelectorAll('.card-pinyin.selected').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
@@ -202,13 +371,15 @@ function initGame() {
 function tryMatch() {
   if (!state.selectedHz || !state.selectedPy) return;
   const hz = state.selectedHz, py = state.selectedPy;
-  if (hz.dataset.pinyin === py.dataset.pinyin && hz.dataset.id !== py.dataset.id) {
-    // 配对成功
-    hz.classList.add('matched'); py.classList.add('matched');
+
+  // ✨ 关键修复：用"去声调"的版本比较！
+  // 「月」(yue4) 和「yuè」匹配：都变成 "yue"
+  if (hz.dataset.matchKey === py.dataset.matchKey) {
+    hz.classList.add('matched');
+    py.classList.add('matched');
     state.matched++;
     state.combo++;
     state.score += 10 * state.combo;
-    speak('太棒了！');
     updateScore();
     if (state.matched >= TOTAL) {
       setTimeout(() => {
@@ -219,12 +390,9 @@ function tryMatch() {
   } else {
     state.combo = 0;
     updateScore();
-    if (hz.dataset.pinyin !== py.dataset.pinyin) {
-      // 错配，提示音
-      setTimeout(() => speak('再试试'), 100);
-    }
   }
-  state.selectedHz = null; state.selectedPy = null;
+  state.selectedHz = null;
+  state.selectedPy = null;
   setTimeout(() => {
     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
   }, 200);
