@@ -55,20 +55,10 @@ class PinyinLine {
 class HuaXiaApp {
   init() {
     this.renderHome();
-    this._bindLifecycleUpload();
     setTimeout(() => this._logVisit(), 100);
   }
 
-  // ✨ 关键修复：使用 fetch keepalive 替代 sendBeacon
-  _bindLifecycleUpload() {
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this._flushVisitQueueKeepAlive();
-    });
-    window.addEventListener('pagehide', () => this._flushVisitQueueKeepAlive());
-    // 兜底：每 30 秒检查
-    setInterval(() => this._flushVisitQueue(), 30000);
-  }
-
+  // 🎯 终极简化版：每次访问立即记录，绝不丢
   async _logVisit() {
     try {
       const loc = await this._getLocWithCache();
@@ -76,15 +66,85 @@ class HuaXiaApp {
       const el = document.getElementById('my-location');
       if (el) el.textContent = loc.country === '未知' ? '🌍 位置暂不可用' : `🌍 ${loc.country}${loc.region ? '·' + loc.region : ''}${loc.city ? '·' + loc.city : ''}`;
 
-      const recent = JSON.parse(localStorage.getItem('hx_recent_log') || '{}');
-      if (recent.ip === loc.ip && Date.now() - recent.time < 30 * 60 * 1000) return;
-
+      // ✅ 直接尝试上传（不缓存、不去重、不延迟）
       if (window.GH && window.GH.hasAuth()) {
         const record = { time: new Date().toISOString(), ip: loc.ip, country: loc.country, region: loc.region, city: loc.city, ua: navigator.userAgent.substring(0, 60), page: '/' };
-        localStorage.setItem('hx_recent_log', JSON.stringify({ ip: loc.ip, time: Date.now() }));
-        this._addToVisitQueue(record);
+        
+        // 立即上传（不等 5 秒）
+        this._uploadVisit(record).catch(e => {
+          // 上传失败，存到 localStorage
+          this._savePending(record);
+        });
       }
     } catch (e) { console.warn('log visit:', e); }
+  }
+
+  // ✅ 失败降级
+  _savePending(record) {
+    try {
+      const pending = JSON.parse(localStorage.getItem('hx_visit_pending') || '[]');
+      pending.push(record);
+      // 只保留最近 50 条
+      if (pending.length > 50) pending.splice(0, pending.length - 50);
+      localStorage.setItem('hx_visit_pending', JSON.stringify(pending));
+      // 10 秒后重试
+      setTimeout(() => this._flushPending(), 10000);
+    } catch (e) {}
+  }
+
+  _flushPending() {
+    try {
+      const pending = JSON.parse(localStorage.getItem('hx_visit_pending') || '[]');
+      if (pending.length === 0) return;
+      const cfg = window.GH.cfg;
+      if (!cfg.user || !cfg.token) return;
+      
+      // 逐条上传
+      (async () => {
+        const success = [];
+        for (const r of pending) {
+          try {
+            await this._uploadOne(r);
+            success.push(r);
+          } catch (e) { break; }
+        }
+        // 移除成功的
+        if (success.length > 0) {
+          const remain = pending.filter(r => !success.includes(r));
+          localStorage.setItem('hx_visit_pending', JSON.stringify(remain));
+        }
+      })();
+    } catch (e) {}
+  }
+
+  // ✅ 立即上传一条
+  _uploadVisit(record) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const cfg = window.GH.cfg;
+        if (!cfg.user || !cfg.token) return reject('未配置');
+        const issue = await this._getTodayIssue();
+        if (!issue) {
+          // 没有缓存的 Issue，存到 pending
+          this._savePending(record);
+          return resolve();
+        }
+        await this._uploadOne(record, issue.number);
+        resolve();
+      } catch (e) { reject(e); }
+    });
+  }
+
+  async _uploadOne(record, issueNum) {
+    const cfg = window.GH.cfg;
+    if (!issueNum) issueNum = (await this._getTodayIssue())?.number;
+    if (!issueNum) throw new Error('无 Issue 编号');
+    const body = `| ${record.time} | ${record.ip} | ${record.country} | ${record.region || ''} | ${record.city || ''} | ${record.ua || ''} | ${record.page || ''} |`;
+    await this._ghFetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issueNum}/comments`, {
+      method: 'POST',
+      headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body })
+    });
   }
 
   async _getTodayIssue() {
@@ -103,76 +163,6 @@ class HuaXiaApp {
       localStorage.setItem(cacheKey, JSON.stringify({ number: issue.number, date }));
       return { number: issue.number, date };
     } catch (e) { return null; }
-  }
-
-  _addToVisitQueue(record) {
-    try {
-      const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
-      queue.push(record);
-      localStorage.setItem('hx_visit_queue', JSON.stringify(queue));
-      clearTimeout(this._batchTimer);
-      this._batchTimer = setTimeout(() => this._flushVisitQueue(), 5000);
-    } catch (e) {}
-  }
-
-  // ✨ 关键修复：使用 fetch keepalive（关键字段 keepalive: true）
-  _flushVisitQueueKeepAlive() {
-    try {
-      const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
-      if (queue.length === 0) return;
-      const cfg = window.GH.cfg;
-      if (!cfg.user || !cfg.token) return;
-      const issue = this._getTodayIssueSync();
-      if (!issue) return;
-      const body = this._formatBatchComment(queue);
-      const url = `https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`;
-
-      // ✨ fetch keepalive 可以在页面关闭后继续完成
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `token ${cfg.token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ body }),
-        keepalive: true   // ✨ 关键：即使页面关闭也继续
-      }).catch(() => {});  // 静默失败，不影响用户
-
-      // 立即清空队列（请求已经在路上）
-      localStorage.setItem('hx_visit_queue', '[]');
-    } catch (e) {}
-  }
-
-  _getTodayIssueSync() {
-    const date = new Date().toISOString().slice(0, 10);
-    const cached = localStorage.getItem('hx_visit_issue_' + date);
-    if (cached) { try { return JSON.parse(cached); } catch (e) {} }
-    return null;
-  }
-
-  async _flushVisitQueue() {
-    try {
-      const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
-      if (queue.length === 0) return;
-      const cfg = window.GH.cfg;
-      if (!cfg.user || !cfg.token) return;
-      const issue = await this._getTodayIssue();
-      if (!issue) return;
-      const body = this._formatBatchComment(queue);
-      try {
-        await this._ghFetch(`https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`, { method: 'POST', headers: { 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
-        localStorage.setItem('hx_visit_queue', '[]');
-      } catch (e) {}
-    } catch (e) {}
-  }
-
-  _formatBatchComment(records) {
-    const lines = ['| 时间 | IP | 国家 | 地区 | 城市 | UA | 页面 |', '|---|---|---|---|---|---|---|'];
-    records.forEach(r => {
-      lines.push(`| ${r.time} | ${r.ip} | ${r.country} | ${r.region || ''} | ${r.city || ''} | ${r.ua || ''} | ${r.page || ''} |`);
-    });
-    return lines.join('\n');
   }
 
   _ghFetch(url, options = {}) {
@@ -206,7 +196,7 @@ class HuaXiaApp {
     return { ip: '未知', country: '未知', region: '', city: '', _t: Date.now() };
   }
 
-  // ===== 以下代码完全不动（保留所有现有功能）=====
+  // ===== 以下代码完全不动 =====
   renderHome() {
     document.getElementById('app').innerHTML = `
       <div class="home-header">
