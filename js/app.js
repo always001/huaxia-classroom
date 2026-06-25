@@ -54,9 +54,16 @@ class PinyinLine {
 
 class HuaXiaApp {
   init() {
-    this.renderHome();
+    try { this.renderHome(); }
+    catch (e) { console.error('renderHome err:', e); }
+
+    // ✨ 加这一行：触发访问记录
     setTimeout(() => this._logVisit(), 100);
+  
+    safeAsync(() => this._loadLocation());
+    safeAsync(() => this._initTTS());
   }
+
 
   // 🎯 终极简化版：每次访问立即记录，绝不丢
   async _logVisit() {
