@@ -55,20 +55,18 @@ class PinyinLine {
 class HuaXiaApp {
   init() {
     this.renderHome();
-    this._bindLifecycleUpload();  // ✨ 绑定生命周期事件（关键修复）
+    this._bindLifecycleUpload();
     setTimeout(() => this._logVisit(), 100);
   }
 
-  // ✨ 关键修复：页面关闭/隐藏时立即上传
+  // ✨ 关键修复：使用 fetch keepalive 替代 sendBeacon
   _bindLifecycleUpload() {
-    // 页面隐藏时（用户切走标签页、最小化）
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this._flushVisitQueueBeacon();
+      if (document.hidden) this._flushVisitQueueKeepAlive();
     });
-    // 页面关闭时
-    window.addEventListener('pagehide', () => this._flushVisitQueueBeacon());
-    // 兜底：每 60 秒检查一次
-    setInterval(() => this._flushVisitQueue(), 60000);
+    window.addEventListener('pagehide', () => this._flushVisitQueueKeepAlive());
+    // 兜底：每 30 秒检查
+    setInterval(() => this._flushVisitQueue(), 30000);
   }
 
   async _logVisit() {
@@ -112,14 +110,13 @@ class HuaXiaApp {
       const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
       queue.push(record);
       localStorage.setItem('hx_visit_queue', JSON.stringify(queue));
-      // ✨ 5 秒后尝试上传（普通情况）
       clearTimeout(this._batchTimer);
       this._batchTimer = setTimeout(() => this._flushVisitQueue(), 5000);
     } catch (e) {}
   }
 
-  // ✨ 关键修复：使用 sendBeacon 立即上传
-  _flushVisitQueueBeacon() {
+  // ✨ 关键修复：使用 fetch keepalive（关键字段 keepalive: true）
+  _flushVisitQueueKeepAlive() {
     try {
       const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
       if (queue.length === 0) return;
@@ -129,14 +126,24 @@ class HuaXiaApp {
       if (!issue) return;
       const body = this._formatBatchComment(queue);
       const url = `https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`;
-      // ✨ sendBeacon 即使页面关闭也能完成！
-      const blob = new Blob([JSON.stringify({ body })], { type: 'application/json' });
-      const sent = navigator.sendBeacon(url, blob);
-      if (sent) localStorage.setItem('hx_visit_queue', '[]');
+
+      // ✨ fetch keepalive 可以在页面关闭后继续完成
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${cfg.token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ body }),
+        keepalive: true   // ✨ 关键：即使页面关闭也继续
+      }).catch(() => {});  // 静默失败，不影响用户
+
+      // 立即清空队列（请求已经在路上）
+      localStorage.setItem('hx_visit_queue', '[]');
     } catch (e) {}
   }
 
-  // 同步获取缓存的 Issue（不等待 Promise）
   _getTodayIssueSync() {
     const date = new Date().toISOString().slice(0, 10);
     const cached = localStorage.getItem('hx_visit_issue_' + date);
@@ -144,7 +151,6 @@ class HuaXiaApp {
     return null;
   }
 
-  // 普通 fetch 上传（60 秒兜底用）
   async _flushVisitQueue() {
     try {
       const queue = JSON.parse(localStorage.getItem('hx_visit_queue') || '[]');
