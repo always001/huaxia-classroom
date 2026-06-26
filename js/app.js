@@ -1,22 +1,23 @@
 // ================================================================
-// ✅ 兜底定义：确保 window.GH 存在（不依赖顶部 script 块）
+// ✅ 兜底：确保所有依赖都存在
 // ================================================================
 if (typeof window.GH === 'undefined') {
   window.GH = {
-    get cfg() { 
-      try { return JSON.parse(localStorage.getItem('hx_gh_config') || '{}'); } 
-      catch(e) { return {}; } 
-    },
-    set cfg(v) { 
-      try { localStorage.setItem('hx_gh_config', JSON.stringify(v)); } 
-      catch(e) {} 
-    },
-    hasAuth() { 
-      const c = this.cfg; 
-      return !!(c.user && c.token && c.chatRepo && c.visitRepo); 
-    }
+    get cfg() { try { return JSON.parse(localStorage.getItem('hx_gh_config') || '{}'); } catch(e) { return {}; } },
+    set cfg(v) { try { localStorage.setItem('hx_gh_config', JSON.stringify(v)); } catch(e) {} },
+    hasAuth() { const c = this.cfg; return !!(c.user && c.token && c.chatRepo && c.visitRepo); }
   };
 }
+if (typeof window.getPinyinRaw === 'undefined') {
+  window.getPinyinRaw = function(ch) { return window.PINYIN_DATA?.[ch] || null; };
+}
+if (typeof window.toTonedPinyin === 'undefined') {
+  window.toTonedPinyin = function(p) { return p || ''; };
+}
+if (typeof window.TONE_MAP_DATA === 'undefined') {
+  window.TONE_MAP_DATA = {};
+}
+
 
 class HuaXiaTTS {
   // ... 原代码
