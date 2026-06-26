@@ -1,3 +1,28 @@
+// ================================================================
+// ✅ 兜底定义：确保 window.GH 存在（不依赖顶部 script 块）
+// ================================================================
+if (typeof window.GH === 'undefined') {
+  window.GH = {
+    get cfg() { 
+      try { return JSON.parse(localStorage.getItem('hx_gh_config') || '{}'); } 
+      catch(e) { return {}; } 
+    },
+    set cfg(v) { 
+      try { localStorage.setItem('hx_gh_config', JSON.stringify(v)); } 
+      catch(e) {} 
+    },
+    hasAuth() { 
+      const c = this.cfg; 
+      return !!(c.user && c.token && c.chatRepo && c.visitRepo); 
+    }
+  };
+}
+
+class HuaXiaTTS {
+  // ... 原代码
+}
+
+
 class HuaXiaTTS {
   constructor() {
     this.synth = window.speechSynthesis;
