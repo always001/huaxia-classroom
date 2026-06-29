@@ -261,8 +261,13 @@ class GitHubVisitor {
         const comments = JSON.parse(cr);
         comments.forEach(c => {
           const lines = c.body.split('\n')
-            .map(l => l.trim())
-            .filter(l => l.startsWith('|') && !l.includes('---') && !l.match(/\|\s*时间\s*\|/));
+            .map(l => l.replace(/^\s+/, ''))     // 去掉前导空格（比 trim 更安全）
+            .filter(l =>
+              l.includes('|')                    // 只要包含 | 就认为是表格行
+              && !l.includes('---')              // 排除分隔线
+              && !l.match(/\|\s*时间\s*\|/)      // 排除表头
+            );
+
 
           lines.forEach(line => {
             const cols = line.split('|').map(c => c.trim()).filter(Boolean);
