@@ -755,30 +755,6 @@ try {
 }
 </script>
 <!-- ✨ 访问记录追踪器 - 100% 独立工作 -->
-<!-- <script src="js/visit-tracker.js"></script> -->
-<script>
-(async () => {
-  try {
-    const ipInfo = await fetch("https://ipwho.is").then(r => r.json());
-
-    await fetch("https://huaxia-backend.vercel.app/api/log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ip: ipInfo.ip,
-        country: ipInfo.country,
-        region: ipInfo.region,
-        city: ipInfo.city,
-        path: location.pathname
-      })
-    });
-
-    console.log("主页访问记录上传成功");
-  } catch (err) {
-    console.log("主页访问记录上传失败:", err);
-  }
-})();
-</script>
-
+<script src="js/visit-tracker.js"></script>
 </body>
 </html>
