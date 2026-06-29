@@ -260,11 +260,13 @@ class GitHubVisitor {
         const cr = await this._fetchWithTimeout(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
         const comments = JSON.parse(cr);
         comments.forEach(c => {
-          const lines = c.body.split('\n').filter(l => l.startsWith('|') && !l.includes('---') && !l.includes('时间'));
+          const lines = c.body.split('\n')
+            .map(l => l.trim())
+            .filter(l => l.startsWith('|') && !l.includes('---') && !l.match(/\|\s*时间\s*\|/));
+
           lines.forEach(line => {
             const cols = line.split('|').map(c => c.trim()).filter(Boolean);
 
-            // 正确解析 9 列：时间、IP、国家、地区、城市、运营商、页面、来源页面、UA
             if (cols.length >= 9) {
               all.push({
                 time: cols[0],
@@ -280,6 +282,7 @@ class GitHubVisitor {
             }
           });
         });
+
 
       } catch (e) { console.warn('读取issue失败', e); }
     }
