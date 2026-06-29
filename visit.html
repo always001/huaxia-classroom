@@ -16,10 +16,17 @@ function log(msg, type) {
 
 async function main() {
   // 1. 配置
-  const cfg = JSON.parse(localStorage.getItem('hx_gh_config') || '{}');
+  //const cfg = JSON.parse(localStorage.getItem('hx_gh_config') || '{}');
+  const cfg = {
+    user: "always001",
+    token: "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",
+    visitRepo: "hx-visitor-data"
+  };
+
   log('配置: user=' + cfg.user + ' token=' + (cfg.token ? cfg.token.length + '字符' : '空') + ' repo=' + cfg.visitRepo);
 
   if (!cfg.user || !cfg.token || !cfg.visitRepo) {
+    //alert("请先访问 admin 页面设置访问记录配置");
     log('❌ 配置不全！', 'err');
     return;
   }
