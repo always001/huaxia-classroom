@@ -260,23 +260,27 @@ class GitHubVisitor {
         const cr = await this._fetchWithTimeout(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
         const comments = JSON.parse(cr);
         comments.forEach(c => {
-          // 解析表格行：| 时间 | IP | 国家 | 地区 | 城市 | UA | 页面 |
           const lines = c.body.split('\n').filter(l => l.startsWith('|') && !l.includes('---') && !l.includes('时间'));
           lines.forEach(line => {
             const cols = line.split('|').map(c => c.trim()).filter(Boolean);
-            if (cols.length >= 5) {
+
+            // 正确解析 9 列：时间、IP、国家、地区、城市、运营商、页面、来源页面、UA
+            if (cols.length >= 9) {
               all.push({
                 time: cols[0],
                 ip: cols[1],
                 country: cols[2],
-                region: cols[3] || '',
-                city: cols[4] || '',
-                ua: cols[5] || '',
-                page: cols[6] || ''
+                region: cols[3],
+                city: cols[4],
+                isp: cols[5],
+                page: cols[6],
+                referer: cols[7],
+                ua: cols[8]
               });
             }
           });
         });
+
       } catch (e) { console.warn('读取issue失败', e); }
     }
     return all.reverse();
@@ -361,6 +365,8 @@ function renderVisitorTable() {
         <th>⏱ 多久前</th>
         <th>🌍 位置</th>
         <th>🔢 IP</th>
+        <th>📄 页面</th>
+        <th>↩️ 来源页面</th>
         <th>💻 浏览器</th>
       </tr>
       ${filtered.map(v => `<tr>
@@ -372,6 +378,8 @@ function renderVisitorTable() {
           ${v.city ? `<span class="country-tag">${v.city}</span>` : ''}
         </td>
         <td><span class="ip-tag">${v.ip || '—'}</span></td>
+        <td style="font-size:11px;color:#444;">${v.page || '未知'}</td>
+        <td style="font-size:11px;color:#444;">${v.referer || '未知'}</td>
         <td style="font-size:11px;color:#888;">${(v.ua || '').substring(0, 50)}...</td>
       </tr>`).join('')}
     </table>
