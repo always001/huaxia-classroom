@@ -1,7 +1,13 @@
-// /api/record-visit.js
-// 稳定版：使用 ipwho.is + fallback，解决日本 IP 解析 undefined 问题
-
 export default async function handler(req, res) {
+  // ⭐ 允许 GitHub Pages 调用 Vercel API（跨域）
+  res.setHeader("Access-Control-Allow-Origin", "https://always001.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   const GH_USER = "always001";
   const GH_REPO = "hx-visitor-data";
   const GH_TOKEN = process.env.GH_TOKEN;
@@ -10,23 +16,18 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "GH_TOKEN not set in environment variables" });
   }
 
-  // 前端传来的页面信息
   const { page, referer } = req.body || {};
 
-  // 获取真实 IP（Vercel 自动提供）
   const ip =
     req.headers["x-real-ip"] ||
     req.headers["x-forwarded-for"] ||
     req.socket.remoteAddress ||
     "未知";
 
-  // -------------------------------
   // ⭐ 稳定 IP 解析（ipwho.is + fallback）
-  // -------------------------------
   let geo = {};
 
   try {
-    // 第一优先：ipwho.is（最稳定）
     const r1 = await fetch(`https://ipwho.is/${ip}`);
     const g1 = await r1.json();
 
@@ -42,7 +43,6 @@ export default async function handler(req, res) {
     }
   } catch (e) {
     try {
-      // 第二优先：ipapi.co（备用）
       const r2 = await fetch(`https://ipapi.co/${ip}/json/`);
       const g2 = await r2.json();
 
@@ -57,13 +57,9 @@ export default async function handler(req, res) {
     }
   }
 
-  // -------------------------------
-  // ⭐ Issue 标题（按日期）
-  // -------------------------------
   const today = new Date().toISOString().slice(0, 10);
   const issueTitle = `访客记录 ${today}`;
 
-  // 查找今天的 Issue
   let issue;
   try {
     const r = await fetch(
@@ -76,7 +72,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to fetch issues", detail: e.message });
   }
 
-  // 不存在则创建
   if (!issue) {
     const r = await fetch(
       `https://api.github.com/repos/${GH_USER}/${GH_REPO}/issues`,
@@ -96,9 +91,6 @@ export default async function handler(req, res) {
     issue = await r.json();
   }
 
-  // -------------------------------
-  // ⭐ 写入记录（含页面路径）
-  // -------------------------------
   const now = new Date().toISOString();
 
   const body = `
@@ -107,7 +99,6 @@ export default async function handler(req, res) {
 | ${now} | ${ip} | ${geo.country} | ${geo.region} | ${geo.city} | ${geo.isp} | ${page || "未知"} | ${referer || "未知"} | ${req.headers["user-agent"]?.substring(0, 80)} |
 `;
 
-  // 写入评论
   try {
     await fetch(
       `https://api.github.com/repos/${GH_USER}/${GH_REPO}/issues/${issue.number}/comments`,
