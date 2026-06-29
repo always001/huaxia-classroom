@@ -1,29 +1,22 @@
 import { Octokit } from "octokit";
 
 export default async function handler(req, res) {
-  // 允许跨域（解决 Failed to fetch 的关键）
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Content-Type", "application/json");
 
-  // 处理预检请求（浏览器会先发 OPTIONS）
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // 只允许 POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // 解析前端传来的 JSON
   const { ip, country, region, city, path } = req.body;
 
-  if (!ip) {
-    return res.status(400).json({ error: "Missing IP" });
-  }
-
-  // GitHub Token
   const GH_TOKEN = process.env.GH_TOKEN;
   if (!GH_TOKEN) {
     return res.status(500).json({ error: "GH_TOKEN missing" });
@@ -36,7 +29,6 @@ export default async function handler(req, res) {
   const title = `访客记录 ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
 
   try {
-    // 创建 Issue
     const issue = await octokit.rest.issues.create({
       owner,
       repo,
@@ -44,7 +36,6 @@ export default async function handler(req, res) {
       body: `IP: ${ip}\n国家: ${country}\n地区: ${region}\n城市: ${city}\n路径: ${path}`
     });
 
-    // 添加评论
     await octokit.rest.issues.createComment({
       owner,
       repo,
