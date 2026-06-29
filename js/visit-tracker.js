@@ -1,7 +1,9 @@
 /**
- * 访问记录追踪器 - 纯前端 + CORS 代理版本
+ * 访问记录追踪器 - 纯前端 + 最新可用 CORS 代理版本
  * 可在中国、日本、美国、任何国家成功写入 GitHub Issues
  */
+
+const CORS = "https://corsproxy.io/?";
 
 async function _vtGetIP() {
   const sources = [
@@ -35,9 +37,9 @@ async function _vtGetTodayIssue(user, token, repo) {
   const title = '访客记录 ' + date;
 
   try {
-    // ⭐ 使用 CORS 代理绕过 GitHub 限制
+    // ⭐ 使用最新可用 CORS 代理
     const r = await fetch(
-      `https://cors.isomorphic-git.org/https://api.github.com/repos/${user}/${repo}/issues?labels=visitor-log&state=open&per_page=10`,
+      `${CORS}https://api.github.com/repos/${user}/${repo}/issues?labels=visitor-log&state=open&per_page=10`,
       { headers: { 'Authorization': 'token ' + token } }
     );
 
@@ -45,9 +47,9 @@ async function _vtGetTodayIssue(user, token, repo) {
     const existing = issues.find(i => i.title === title);
     if (existing) return existing;
 
-    // ⭐ 创建新的 Issue（同样必须走 CORS 代理）
+    // ⭐ 创建新的 Issue
     const cr = await fetch(
-      `https://cors.isomorphic-git.org/https://api.github.com/repos/${user}/${repo}/issues`,
+      `${CORS}https://api.github.com/repos/${user}/${repo}/issues`,
       {
         method: 'POST',
         headers: {
@@ -81,9 +83,9 @@ async function visitTracker() {
     const now = new Date().toISOString();
     const body = `| ${now} | ${loc.ip} | ${loc.country} | ${loc.region||''} | ${loc.city||''} | ${navigator.userAgent.substring(0,60)} | ${location.pathname} |`;
 
-    // ⭐ 写评论也必须走 CORS 代理
+    // ⭐ 写评论也必须走最新 CORS 代理
     await fetch(
-      `https://cors.isomorphic-git.org/https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`,
+      `${CORS}https://api.github.com/repos/${cfg.user}/${cfg.visitRepo}/issues/${issue.number}/comments`,
       {
         method: 'POST',
         headers: {
