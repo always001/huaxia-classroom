@@ -1,28 +1,51 @@
-import { kv } from '@vercel/kv';
-
 export default async function handler(req, res) {
-  const ip =
-    req.headers["x-forwarded-for"]?.split(",")[0] ||
-    req.connection.remoteAddress ||
-    "unknown";
+  const { ip, country, region, city, path } = req.body;
 
-  const ua = req.headers["user-agent"] || "unknown";
-  const url = req.headers["referer"] || "unknown";
-  const time = new Date().toISOString();
+  const token = process.env.GH_TOKEN; // 放在 Vercel 环境变量里
+  const repo = "hx-visitor-data";
+  const user = "always001";
 
-  // IP 定位
-  const geo = await fetch(`https://ipapi.co/${ip}/json/`).then(r => r.json());
+  const date = new Date().toISOString().slice(0, 10);
+  const title = `访客记录 ${date}`;
 
-  const record = {
-    ip,
-    country: geo.country_name || "Unknown",
-    city: geo.city || "Unknown",
-    ua,
-    url,
-    time
-  };
+  // 查找或创建 Issue
+  let issue;
+  {
+    const r = await fetch(`https://api.github.com/repos/${user}/${repo}/issues?labels=visitor-log&state=open&per_page=10`, {
+      headers: { Authorization: `token ${token}` }
+    });
+    const issues = await r.json();
+    issue = Array.isArray(issues) ? issues.find(i => i.title === title) : null;
 
-  await kv.lpush("visit_logs", JSON.stringify(record));
+    if (!issue) {
+      const cr = await fetch(`https://api.github.com/repos/${user}/${repo}/issues`, {
+        method: "POST",
+        headers: {
+          Authorization: `token ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title,
+          body: `# ${date}`,
+          labels: ["visitor-log"]
+        })
+      });
+      issue = await cr.json();
+    }
+  }
+
+  // 添加评论
+  const now = new Date().toISOString();
+  const body = `| ${now} | ${ip} | ${country} | ${region} | ${city} | | ${path} |`;
+
+  await fetch(`https://api.github.com/repos/${user}/${repo}/issues/${issue.number}/comments`, {
+    method: "POST",
+    headers: {
+      Authorization: `token ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ body })
+  });
 
   res.status(200).json({ ok: true });
 }
