@@ -41,7 +41,7 @@ async function main() {
   log('上传访问记录到 Vercel 后端...');
 
   try {
-    const r = await fetch("https://huaxia-classroom.vercel.app/api/log", {
+    const r = await fetch("https://huaxia-backend.vercel.app/api/log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
