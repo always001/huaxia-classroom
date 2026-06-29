@@ -252,26 +252,38 @@ class GitHubVisitor {
   headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
 
   async getAll() {
-    const r = await this._fetchWithTimeout(`${this.base}/issues?labels=visitor-log&state=all&per_page=30`, { headers: this.headers() });
+  const all = [];
+  let page = 1;
+
+  while (true) {
+    // 每页读取 100 个 Issue（GitHub 最大允许值）
+    const r = await this._fetchWithTimeout(
+      `${this.base}/issues?labels=visitor-log&state=all&per_page=100&page=${page}`,
+      { headers: this.headers() }
+    );
+
     const issues = JSON.parse(r);
-    const all = [];
+    if (issues.length === 0) break; // 没有更多 Issue，停止
+
     for (const issue of issues) {
       try {
-        const cr = await this._fetchWithTimeout(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
+        const cr = await this._fetchWithTimeout(
+          `${this.base}/issues/${issue.number}/comments?per_page=100`,
+          { headers: this.headers() }
+        );
         const comments = JSON.parse(cr);
+
         comments.forEach(c => {
           const lines = c.body.split('\n')
-            .map(l => l.replace(/^\s+/, ''))     // 去掉前导空格（比 trim 更安全）
+            .map(l => l.replace(/^\s+/, ''))
             .filter(l =>
-              l.includes('|')                    // 只要包含 | 就认为是表格行
-              && !l.includes('---')              // 排除分隔线
-              && !l.match(/\|\s*时间\s*\|/)      // 排除表头
+              l.includes('|') &&
+              !l.includes('---') &&
+              !l.match(/\|\s*时间\s*\|/)
             );
-
 
           lines.forEach(line => {
             const cols = line.split('|').map(c => c.trim()).filter(Boolean);
-
             if (cols.length >= 9) {
               all.push({
                 time: cols[0],
@@ -287,12 +299,17 @@ class GitHubVisitor {
             }
           });
         });
-
-
-      } catch (e) { console.warn('读取issue失败', e); }
+      } catch (e) {
+        console.warn('读取 issue 失败', e);
+      }
     }
-    return all.reverse();
+
+    page++; // 继续读取下一页 Issue
   }
+
+  return all.reverse(); // 最新记录排前面
+}
+
 
   async _fetchWithTimeout(url, options = {}) {
     const controller = new AbortController();
