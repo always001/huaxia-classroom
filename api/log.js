@@ -1,7 +1,11 @@
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
   const { ip, country, region, city, path } = req.body;
 
-  const token = process.env.GH_TOKEN; // 放在 Vercel 环境变量里
+  const token = process.env.GH_TOKEN;
   const repo = "hx-visitor-data";
   const user = "always001";
 
@@ -36,7 +40,7 @@ export default async function handler(req, res) {
 
   // 添加评论
   const now = new Date().toISOString();
-  const body = `| ${now} | ${ip} | ${country} | ${region} | ${city} | | ${path} |`;
+  const body = `| ${now} | ${ip} | ${country} | ${region} | ${city} | ${path} |`;
 
   await fetch(`https://api.github.com/repos/${user}/${repo}/issues/${issue.number}/comments`, {
     method: "POST",
