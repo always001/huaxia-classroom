@@ -334,6 +334,44 @@ async function loadVisitors() {
   }
 }
 
+// ===== 分页功能 =====
+let currentPage = 1;
+const pageSize = 20; // 每页显示 20 条，可自行修改
+
+function paginate(list) {
+  const total = list.length;
+  const totalPages = Math.ceil(total / pageSize);
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize;
+  return {
+    total,
+    totalPages,
+    pageData: list.slice(start, end)
+  };
+}
+
+function renderPagination(totalPages) {
+  if (totalPages <= 1) return '';
+
+  let html = `<div style="margin-top:12px;text-align:center;">`;
+
+  html += `<button class="btn btn-secondary" onclick="currentPage--; renderVisitorTable()">上一页</button>`;
+
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="btn ${i === currentPage ? 'btn-primary' : 'btn-secondary'}"
+              onclick="currentPage=${i}; renderVisitorTable()">${i}</button>`;
+  }
+
+  html += `<button class="btn btn-secondary" onclick="currentPage++; renderVisitorTable()">下一页</button>`;
+  html += `</div>`;
+
+  return html;
+}
+
+
 function renderVisitorTable() {
   const list = document.getElementById('visitor-list');
   const stats = document.getElementById('visitor-stats');
@@ -360,6 +398,9 @@ function renderVisitorTable() {
     <div class="stat-card"><div class="num">${countries.size}</div><div class="label">国家/地区</div></div>
   `;
 
+  // 分页处理
+  const { total, totalPages, pageData } = paginate(filtered);
+
   // 表格
   list.innerHTML = `
     <table>
@@ -372,21 +413,26 @@ function renderVisitorTable() {
         <th>↩️ 来源页面</th>
         <th>💻 浏览器</th>
       </tr>
-      ${filtered.map(v => `<tr>
-        <td>${formatDate(v.time)}</td>
-        <td style="color:#888;">${relativeTime(v.time)}</td>
-        <td>
-          <strong>${v.country || '未知'}</strong>
-          ${v.region ? `<span class="country-tag">${v.region}</span>` : ''}
-          ${v.city ? `<span class="country-tag">${v.city}</span>` : ''}
-        </td>
-        <td><span class="ip-tag">${v.ip || '—'}</span></td>
-        <td style="font-size:11px;color:#444;">${v.page || '未知'}</td>
-        <td style="font-size:11px;color:#444;">${v.referer || '未知'}</td>
-        <td style="font-size:11px;color:#888;">${(v.ua || '').substring(0, 50)}...</td>
-      </tr>`).join('')}
+      ${pageData.map(v => `
+        <tr>
+          <td>${formatDate(v.time)}</td>
+          <td style="color:#888;">${relativeTime(v.time)}</td>
+          <td>
+            <strong>${v.country || '未知'}</strong>
+            ${v.region ? `<span class="country-tag">${v.region}</span>` : ''}
+            ${v.city ? `<span class="country-tag">${v.city}</span>` : ''}
+          </td>
+          <td><span class="ip-tag">${v.ip || '—'}</span></td>
+          <td style="font-size:11px;color:#444;">${v.page || '未知'}</td>
+          <td style="font-size:11px;color:#444;">${v.referer || '未知'}</td>
+          <td style="font-size:11px;color:#888;">${(v.ua || '').substring(0, 50)}...</td>
+        </tr>
+      `).join('')}
     </table>
+
+    ${renderPagination(totalPages)}
   `;
+
 }
 
 function exportVisitorsCSV() {
