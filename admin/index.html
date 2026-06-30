@@ -216,6 +216,403 @@ checkStored();
 
 /* ===== 原始后台 JS（完整保留） ===== */
 /* 你的 GitHubChat、GitHubVisitor、loadVisitors、renderVisitorTable 等全部保留 */
+
+// ===== 通用工具 =====
+function showPanel(name) {
+  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  document.getElementById('panel-' + name).style.display = 'block';
+}
+
+// ✨ 时区友好的日期格式化
+function formatDate(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+  } catch (e) {
+    return isoStr;
+  }
+}
+
+// ✨ 相对时间（"刚刚"、"5分钟前"）
+function relativeTime(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    const diff = Date.now() - d.getTime();
+    if (diff < 0) return formatDate(isoStr);
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return '刚刚';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}分钟前`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}小时前`;
+    const day = Math.floor(hr / 24);
+    if (day < 7) return `${day}天前`;
+    return formatDate(isoStr);
+  } catch (e) {
+    return isoStr;
+  }
+}
+
+// ===== GitHub 配置 =====
+function getCfg() {
+  return JSON.parse(localStorage.getItem('hx_gh_config') || '{}');
+}
+
+function checkCfg() {
+  const cfg = getCfg();
+  if (!cfg.user || !cfg.token || !cfg.chatRepo || !cfg.visitRepo) {
+    alert('⚠️ 请先在学生端「⚙️ 配置」按钮里填好 GitHub 信息（用户名、Token、2个仓库名）');
+    return false;
+  }
+  return true;
+}
+
+// ===== GitHubChat 类 =====
+class GitHubChat {
+  constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
+  get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
+  headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
+
+  async getRoomIssue(roomId) {
+    const r = await this._fetchWithTimeout(`${this.base}/issues?labels=chat-room&state=open&per_page=100`, { headers: this.headers() });
+    const issues = JSON.parse(r);
+    let issue = issues.find(i => i.title === `[Chat] ${roomId}`);
+    if (!issue) throw new Error('房间不存在：' + roomId);
+    return issue;
+  }
+
+  async getMessages(roomId) {
+    const issue = await this.getRoomIssue(roomId);
+    const r = await this._fetchWithTimeout(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
+    const comments = JSON.parse(r);
+    return comments.map(c => {
+      const m = c.body.match(/^\*\*([\u{1F000}-\u{1FFFF}\u{1F300}-\u{1F9FF}]*?)\s*([^*]+?)\*\*\s*·\s*([\s\S]*?)\n\n([\s\S]*)$/u);
+      if (m) return { id: c.id, from: m[2].trim(), country: m[1].trim(), time: c.created_at, text: m[4] };
+      return { id: c.id, from: c.user.login, country: '🌏', time: c.created_at, text: c.body };
+    });
+  }
+
+  async deleteRoom(roomId) {
+    const issue = await this.getRoomIssue(roomId);
+    await this._fetchWithTimeout(`${this.base}/issues/${issue.number}`, {
+      method: 'PATCH', headers: this.headers(),
+      body: JSON.stringify({ state: 'closed' })
+    });
+  }
+
+  async _fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 15000);
+    try {
+      const r = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(tid);
+      if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.statusText);
+      return await r.text();
+    } catch (e) {
+      clearTimeout(tid);
+      if (e.name === 'AbortError') throw new Error('请求超时（15秒），请检查网络');
+      throw e;
+    }
+  }
+}
+
+// ===== GitHubVisitor 类 =====
+class GitHubVisitor {
+  constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
+  get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
+  headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
+
+  async getAll() {
+  const all = [];
+  let page = 1;
+
+  while (true) {
+    // 每页读取 100 个 Issue（GitHub 最大允许值）
+    const r = await this._fetchWithTimeout(
+      `${this.base}/issues?labels=visitor-log&state=all&per_page=100&page=${page}`,
+      { headers: this.headers() }
+    );
+
+    const issues = JSON.parse(r);
+    if (issues.length === 0) break; // 没有更多 Issue，停止
+
+    for (const issue of issues) {
+      try {
+        const cr = await this._fetchWithTimeout(
+          `${this.base}/issues/${issue.number}/comments?per_page=100`,
+          { headers: this.headers() }
+        );
+        const comments = JSON.parse(cr);
+
+        comments.forEach(c => {
+          const lines = c.body.split('\n')
+            .map(l => l.replace(/^\s+/, ''))
+            .filter(l =>
+              l.includes('|') &&
+              !l.includes('---') &&
+              !l.match(/\|\s*时间\s*\|/)
+            );
+
+          lines.forEach(line => {
+            const cols = line.split('|').map(c => c.trim()).filter(Boolean);
+            if (cols.length >= 9) {
+              all.push({
+                time: cols[0],
+                ip: cols[1],
+                country: cols[2],
+                region: cols[3],
+                city: cols[4],
+                isp: cols[5],
+                page: cols[6],
+                referer: cols[7],
+                ua: cols[8]
+              });
+            }
+          });
+        });
+      } catch (e) {
+        console.warn('读取 issue 失败', e);
+      }
+    }
+
+    page++; // 继续读取下一页 Issue
+  }
+
+  return all.reverse(); // 最新记录排前面
+}
+
+
+  async _fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 15000);
+    try {
+      const r = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(tid);
+      if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.statusText);
+      return await r.text();
+    } catch (e) {
+      clearTimeout(tid);
+      if (e.name === 'AbortError') throw new Error('请求超时（15秒），请检查网络或 Token');
+      throw e;
+    }
+  }
+}
+
+// ===== 访问记录 =====
+let allVisitors = [];
+
+async function loadVisitors() {
+  if (!checkCfg()) return;
+  const cfg = getCfg();
+  const list = document.getElementById('visitor-list');
+  const stats = document.getElementById('visitor-stats');
+  list.innerHTML = '<p class="loading">⏳ 正在从 GitHub 加载...</p>';
+  stats.innerHTML = '';
+
+  try {
+    const v = new GitHubVisitor(cfg.user, cfg.token, cfg.visitRepo);
+    allVisitors = await v.getAll();
+    if (allVisitors.length === 0) {
+      list.innerHTML = '<p class="empty">📭 还没有访问记录<br><br>请打开学生端 <a href="../" target="_blank">首页</a> 触发一次访问，等 5 秒后再加载。</p>';
+      return;
+    }
+    renderVisitorTable();
+  } catch (e) {
+    list.innerHTML = `<p style="color:#c62828;padding:20px;">❌ 加载失败：${e.message}<br><br>
+      💡 可能原因：<br>
+      • Token 无效（请重新生成）<br>
+      • 仓库名不对（应该是 hx-visitor-data）<br>
+      • 仓库不是 Private<br>
+      • 网络问题</p>`;
+  }
+}
+
+// ===== 分页功能 =====
+let currentPage = 1;
+const pageSize = 20; // 每页显示 20 条，可自行修改
+
+function paginate(list) {
+  const total = list.length;
+  const totalPages = Math.ceil(total / pageSize);
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize;
+  return {
+    total,
+    totalPages,
+    pageData: list.slice(start, end)
+  };
+}
+
+function renderPagination(totalPages) {
+  if (totalPages <= 1) return '';
+
+  let html = `<div style="margin-top:12px;text-align:center;">`;
+
+  html += `<button class="btn btn-secondary" onclick="currentPage--; renderVisitorTable()">上一页</button>`;
+
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="btn ${i === currentPage ? 'btn-primary' : 'btn-secondary'}"
+              onclick="currentPage=${i}; renderVisitorTable()">${i}</button>`;
+  }
+
+  html += `<button class="btn btn-secondary" onclick="currentPage++; renderVisitorTable()">下一页</button>`;
+  html += `</div>`;
+
+  return html;
+}
+
+
+function renderVisitorTable() {
+  const list = document.getElementById('visitor-list');
+  const stats = document.getElementById('visitor-stats');
+  if (allVisitors.length === 0) return;
+
+  // 筛选
+  const filterCountry = document.getElementById('filter-country').value.trim().toLowerCase();
+  let filtered = filterCountry
+    ? allVisitors.filter(v => (v.country + ' ' + v.region + ' ' + v.city).toLowerCase().includes(filterCountry))
+    : allVisitors;
+
+  // 排序
+  const sortBy = document.getElementById('sort-by').value;
+  if (sortBy === 'time-desc') filtered.sort((a, b) => new Date(b.time) - new Date(a.time));
+  else if (sortBy === 'time-asc') filtered.sort((a, b) => new Date(a.time) - new Date(b.time));
+  else if (sortBy === 'country') filtered.sort((a, b) => a.country.localeCompare(b.country));
+
+  // 统计
+  const countries = new Set(filtered.map(v => v.country));
+  const uniqueIPs = new Set(filtered.map(v => v.ip));
+  stats.innerHTML = `
+    <div class="stat-card"><div class="num">${filtered.length}</div><div class="label">总访问</div></div>
+    <div class="stat-card"><div class="num">${uniqueIPs.size}</div><div class="label">独立 IP</div></div>
+    <div class="stat-card"><div class="num">${countries.size}</div><div class="label">国家/地区</div></div>
+  `;
+
+  // 分页处理
+  const { total, totalPages, pageData } = paginate(filtered);
+
+  // 表格
+  list.innerHTML = `
+    <table>
+      <tr>
+        <th>📅 访问时间（本地）</th>
+        <th>⏱ 多久前</th>
+        <th>🌍 位置</th>
+        <th>🔢 IP</th>
+        <th>📄 页面</th>
+        <th>↩️ 来源页面</th>
+        <th>💻 浏览器</th>
+      </tr>
+      ${pageData.map(v => `
+        <tr>
+          <td>${formatDate(v.time)}</td>
+          <td style="color:#888;">${relativeTime(v.time)}</td>
+          <td>
+            <strong>${v.country || '未知'}</strong>
+            ${v.region ? `<span class="country-tag">${v.region}</span>` : ''}
+            ${v.city ? `<span class="country-tag">${v.city}</span>` : ''}
+          </td>
+          <td><span class="ip-tag">${v.ip || '—'}</span></td>
+          <td style="font-size:11px;color:#444;">${v.page || '未知'}</td>
+          <td style="font-size:11px;color:#444;">${v.referer || '未知'}</td>
+          <td style="font-size:11px;color:#888;">${(v.ua || '').substring(0, 50)}...</td>
+        </tr>
+      `).join('')}
+    </table>
+
+    ${renderPagination(totalPages)}
+  `;
+
+}
+
+function exportVisitorsCSV() {
+  if (allVisitors.length === 0) return alert('请先加载记录');
+  const csv = '\uFEFF时间,IP,国家,地区,城市,UA\n' + allVisitors.map(v =>
+    `${formatDate(v.time)},${v.ip},${v.country},${v.region || ''},${v.city || ''},"${(v.ua || '').replace(/"/g, '""')}"`
+  ).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `访问记录_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===== 聊天记录 =====
+async function loadChatMessages() {
+  if (!checkCfg()) return;
+  const cfg = getCfg();
+  const room = document.getElementById('chat-room-input').value.trim();
+  if (!room) return alert('请输入房间号');
+  const list = document.getElementById('chat-list');
+  list.innerHTML = '<p class="loading">⏳ 加载中...</p>';
+
+  try {
+    const c = new GitHubChat(cfg.user, cfg.token, cfg.chatRepo);
+    const msgs = await c.getMessages(room);
+    if (msgs.length === 0) {
+      list.innerHTML = '<p class="empty">📭 该房间还没有消息</p>';
+      return;
+    }
+    list.innerHTML = `
+      <p style="color:#666;font-size:13px;margin-bottom:12px;">房间 <strong>${room}</strong> 共 <strong>${msgs.length}</strong> 条消息</p>
+      ${msgs.map(m => `
+        <div style="padding:12px;margin:8px 0;background:white;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:6px;">
+            <span><strong style="color:#5e35b1;">${m.country} ${m.from}</strong></span>
+            <span title="${formatDate(m.time)}">${relativeTime(m.time)}</span>
+          </div>
+          <div>${escapeHtml(m.text)}</div>
+        </div>
+      `).join('')}
+    `;
+  } catch (e) {
+    list.innerHTML = `<p style="color:#c62828;">❌ 加载失败：${e.message}<br><br>💡 请确认房间号正确（区分大小写）</p>`;
+  }
+}
+
+async function deleteRoom() {
+  if (!checkCfg()) return;
+  const room = document.getElementById('chat-room-input').value.trim();
+  if (!room) return alert('请输入房间号');
+  if (!confirm(`确定删除房间 "${room}"？\n（这会关闭 GitHub Issue，相关消息仍保留）`)) return;
+  const cfg = getCfg();
+  try {
+    const c = new GitHubChat(cfg.user, cfg.token, cfg.chatRepo);
+    await c.deleteRoom(room);
+    alert('✅ 房间已关闭');
+    loadChatMessages();
+  } catch (e) {
+    alert('❌ 删除失败：' + e.message);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// 默认显示编辑面板
+showPanel('editor');
+
+
+
+
+
+
+
 </script>
 
 </body>
