@@ -30,11 +30,22 @@ export default async function handler(req, res) {
 
   const { page, referer } = req.body || {};
 
+  /*
   const ip =
     req.headers["x-real-ip"] ||
     req.headers["x-forwarded-for"] ||
     req.socket.remoteAddress ||
     "未知";
+  */
+  let ip =
+    req.headers["x-real-ip"] ||
+    req.headers["x-forwarded-for"] ||
+    req.socket.remoteAddress ||
+    "未知";
+
+  if (typeof ip === "string" && ip.includes(",")) {
+    ip = ip.split(",")[0].trim(); // 取第一个真实客户端 IP
+  }
 
   // ⭐ 稳定 IP 解析（ipwho.is + fallback）
   let geo = {};
