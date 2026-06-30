@@ -86,35 +86,6 @@
 </style>
 </head>
 <body>
-<!-- 密码保护覆盖层 -->
-  <div class="admin-lock-overlay" id="admin-lock">
-    <div class="admin-lock-card">
-      <div class="admin-lock-title">教师后台访问</div>
-      <div class="admin-lock-subtitle">请输入教师专用访问密码</div>
-
-      <label class="admin-lock-label" for="admin-password">访问密码</label>
-      <input
-        id="admin-password"
-        class="admin-lock-input"
-        type="password"
-        placeholder="请输入密码"
-        autocomplete="current-password"
-      />
-
-      <div class="admin-lock-row">
-        <label>
-          <input type="checkbox" id="admin-remember" />
-          记住我（本机）
-        </label>
-        <span id="admin-lock-hint"></span>
-      </div>
-
-      <button class="admin-lock-btn" id="admin-submit">进入教师后台</button>
-      <div class="admin-lock-error" id="admin-error"></div>
-    </div>
-  </div>
- <!-- 你的原始教师后台内容，全部放这里 -->
-  <div id="admin-content">
 
 <header>
   <h1>👩‍🏫 华夏小课堂 · 教师后台</h1>
@@ -125,16 +96,19 @@
     <button onclick="showPanel('chat')">💬 聊天记录</button>
   </div>
 </header>
+
 <!-- 编辑器面板 -->
 <div id="panel-editor" class="panel" style="display:none;">
   <h2>✏️ 编辑文章</h2>
   <p>（编辑器保留原有功能，本版本专注美化访问记录面板）</p>
   <p>👉 老师可以用学生端的「⚙️ 配置」按钮配置 GitHub，然后在这里查看数据。</p>
 </div>
+
 <!-- 访问记录面板 -->
 <div id="panel-visitor" class="panel" style="display:none;">
   <h2>📊 访问记录</h2>
   <p>从您的 GitHub 私有仓库 <code>hx-visitor-data</code> 读取所有访客的 IP 和位置。</p>
+
   <div class="filter-bar">
     <button class="btn btn-primary" onclick="loadVisitors()">🔄 加载记录</button>
     <button class="btn btn-success" onclick="exportVisitorsCSV()">📥 导出 CSV</button>
@@ -145,9 +119,11 @@
       <option value="country">按国家</option>
     </select>
   </div>
+
   <div id="visitor-stats"></div>
   <div id="visitor-list"></div>
 </div>
+
 <!-- 聊天记录面板 -->
 <div id="panel-chat" class="panel" style="display:none;">
   <h2>💬 聊天记录</h2>
@@ -159,12 +135,14 @@
   </div>
   <div id="chat-list"></div>
 </div>
+
 <script>
 // ===== 通用工具 =====
 function showPanel(name) {
   document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
   document.getElementById('panel-' + name).style.display = 'block';
 }
+
 // ✨ 时区友好的日期格式化
 function formatDate(isoStr) {
   if (!isoStr) return '';
@@ -182,6 +160,7 @@ function formatDate(isoStr) {
     return isoStr;
   }
 }
+
 // ✨ 相对时间（"刚刚"、"5分钟前"）
 function relativeTime(isoStr) {
   if (!isoStr) return '';
@@ -202,10 +181,12 @@ function relativeTime(isoStr) {
     return isoStr;
   }
 }
+
 // ===== GitHub 配置 =====
 function getCfg() {
   return JSON.parse(localStorage.getItem('hx_gh_config') || '{}');
 }
+
 function checkCfg() {
   const cfg = getCfg();
   if (!cfg.user || !cfg.token || !cfg.chatRepo || !cfg.visitRepo) {
@@ -214,11 +195,13 @@ function checkCfg() {
   }
   return true;
 }
+
 // ===== GitHubChat 类 =====
 class GitHubChat {
   constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
   get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
   headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
+
   async getRoomIssue(roomId) {
     const r = await this._fetchWithTimeout(`${this.base}/issues?labels=chat-room&state=open&per_page=100`, { headers: this.headers() });
     const issues = JSON.parse(r);
@@ -226,7 +209,7 @@ class GitHubChat {
     if (!issue) throw new Error('房间不存在：' + roomId);
     return issue;
   }
-  
+
   async getMessages(roomId) {
     const issue = await this.getRoomIssue(roomId);
     const r = await this._fetchWithTimeout(`${this.base}/issues/${issue.number}/comments?per_page=100`, { headers: this.headers() });
@@ -267,17 +250,21 @@ class GitHubVisitor {
   constructor(user, token, repo) { this.user = user; this.token = token; this.repo = repo; }
   get base() { return `https://api.github.com/repos/${this.user}/${this.repo}`; }
   headers() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; }
+
   async getAll() {
   const all = [];
   let page = 1;
+
   while (true) {
     // 每页读取 100 个 Issue（GitHub 最大允许值）
     const r = await this._fetchWithTimeout(
       `${this.base}/issues?labels=visitor-log&state=all&per_page=100&page=${page}`,
       { headers: this.headers() }
     );
+
     const issues = JSON.parse(r);
     if (issues.length === 0) break; // 没有更多 Issue，停止
+
     for (const issue of issues) {
       try {
         const cr = await this._fetchWithTimeout(
@@ -316,10 +303,14 @@ class GitHubVisitor {
         console.warn('读取 issue 失败', e);
       }
     }
+
     page++; // 继续读取下一页 Issue
   }
+
   return all.reverse(); // 最新记录排前面
 }
+
+
   async _fetchWithTimeout(url, options = {}) {
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), 15000);
@@ -386,32 +377,40 @@ function paginate(list) {
 
 function renderPagination(totalPages) {
   if (totalPages <= 1) return '';
+
   let html = `<div style="margin-top:12px;text-align:center;">`;
+
   html += `<button class="btn btn-secondary" onclick="currentPage--; renderVisitorTable()">上一页</button>`;
+
   for (let i = 1; i <= totalPages; i++) {
     html += `<button class="btn ${i === currentPage ? 'btn-primary' : 'btn-secondary'}"
               onclick="currentPage=${i}; renderVisitorTable()">${i}</button>`;
   }
+
   html += `<button class="btn btn-secondary" onclick="currentPage++; renderVisitorTable()">下一页</button>`;
   html += `</div>`;
 
   return html;
 }
 
+
 function renderVisitorTable() {
   const list = document.getElementById('visitor-list');
   const stats = document.getElementById('visitor-stats');
   if (allVisitors.length === 0) return;
+
   // 筛选
   const filterCountry = document.getElementById('filter-country').value.trim().toLowerCase();
   let filtered = filterCountry
     ? allVisitors.filter(v => (v.country + ' ' + v.region + ' ' + v.city).toLowerCase().includes(filterCountry))
     : allVisitors;
+
   // 排序
   const sortBy = document.getElementById('sort-by').value;
   if (sortBy === 'time-desc') filtered.sort((a, b) => new Date(b.time) - new Date(a.time));
   else if (sortBy === 'time-asc') filtered.sort((a, b) => new Date(a.time) - new Date(b.time));
   else if (sortBy === 'country') filtered.sort((a, b) => a.country.localeCompare(b.country));
+
   // 统计
   const countries = new Set(filtered.map(v => v.country));
   const uniqueIPs = new Set(filtered.map(v => v.ip));
@@ -455,6 +454,7 @@ function renderVisitorTable() {
 
     ${renderPagination(totalPages)}
   `;
+
 }
 
 function exportVisitorsCSV() {
@@ -479,6 +479,7 @@ async function loadChatMessages() {
   if (!room) return alert('请输入房间号');
   const list = document.getElementById('chat-list');
   list.innerHTML = '<p class="loading">⏳ 加载中...</p>';
+
   try {
     const c = new GitHubChat(cfg.user, cfg.token, cfg.chatRepo);
     const msgs = await c.getMessages(room);
@@ -526,86 +527,6 @@ function escapeHtml(s) {
 // 默认显示编辑面板
 showPanel('editor');
 </script>
-</div>
-
-
-
-<script>
-    // 你自己设定的密码（例如 "huaxia2026"），先留空哈希占位
-    const HASH = "c8f8e6b0b4a0d1e7f6b1c3a9e4d2f0c1a7b9d8e6f4c2a1b0d3e5f7a9c1b2d3e"; // 64 位十六进制字符串
-    const STORAGE_KEY = "hx_admin_ok";
-
-    // SHA-256 计算
-    function sha256(str) {
-      return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str))
-        .then(buf =>
-          Array.from(new Uint8Array(buf))
-            .map(x => x.toString(16).padStart(2, "0"))
-            .join("")
-        );
-    }
-
-    function showAdmin() {
-      document.getElementById("admin-lock").style.display = "none";
-      document.getElementById("admin-content").style.display = "block";
-    }
-
-    async function checkStored() {
-      try {
-        const ok = localStorage.getItem(STORAGE_KEY);
-        if (ok === "1") {
-          showAdmin();
-        }
-      } catch (e) {
-        // localStorage 不可用时忽略
-      }
-    }
-
-    async function handleSubmit() {
-      const pwdInput = document.getElementById("admin-password");
-      const remember = document.getElementById("admin-remember");
-      const errorEl = document.getElementById("admin-error");
-
-      errorEl.textContent = "";
-
-      const pwd = pwdInput.value.trim();
-      if (!pwd) {
-        errorEl.textContent = "请输入密码";
-        pwdInput.focus();
-        return;
-      }
-
-      try {
-        const hash = await sha256(pwd);
-        if (hash === HASH) {
-          // 记住我
-          if (remember.checked) {
-            try {
-              localStorage.setItem(STORAGE_KEY, "1");
-            } catch (e) {}
-          }
-          showAdmin();
-        } else {
-          errorEl.textContent = "密码错误";
-          pwdInput.value = "";
-          pwdInput.focus();
-        }
-      } catch (e) {
-        errorEl.textContent = "浏览器不支持安全模块，请更换浏览器";
-      }
-    }
-
-    // 事件绑定
-    document.getElementById("admin-submit").addEventListener("click", handleSubmit);
-    document.getElementById("admin-password").addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
-        handleSubmit();
-      }
-    });
-
-    // 页面加载时检查是否已“记住我”
-    checkStored();
-  </script>
 
 </body>
 </html>
