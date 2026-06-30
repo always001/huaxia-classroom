@@ -1,19 +1,7 @@
 export default async function handler(req, res) {
   // ⭐ 允许 GitHub Pages 调用 Vercel API（跨域）
-  //res.setHeader("Access-Control-Allow-Origin", "https://always001.github.io");
-  const origin = req.headers.origin;
-
-  const allowedOrigins = [
-    "https://always001.github.io",
-    "https://huaxia-classroom.vercel.app",
-    "https://huaxia-classroom-pzaxy2fv6-fengling350300-2749s-projects.vercel.app"
-  ];
-
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Origin", "https://always001.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
@@ -28,27 +16,21 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "GH_TOKEN not set in environment variables" });
   }
 
-  const { page, referer } = req.body || {};
+  // ⭐ 支持 GET + POST
+  const page = req.query.page || req.body?.page || "未知";
+  const referer = req.query.referer || req.body?.referer || "未知";
+  const ua = req.query.ua || req.headers["user-agent"] || "";
+  const ts = req.query.ts || Date.now();
 
-  /*
-  const ip =
-    req.headers["x-real-ip"] ||
-    req.headers["x-forwarded-for"] ||
-    req.socket.remoteAddress ||
-    "未知";
-  */
+  // ⭐ 更稳定的真实 IP 获取（中国访问也能拿到）
   let ip =
+    req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
     req.headers["x-real-ip"] ||
-    req.headers["x-forwarded-for"] ||
     req.socket.remoteAddress ||
     "未知";
 
-  if (typeof ip === "string" && ip.includes(",")) {
-    ip = ip.split(",")[0].trim(); // 取第一个真实客户端 IP
-  }
-
-  // ⭐ 稳定 IP 解析（ipwho.is + fallback）
-  let geo = {};
+  // ⭐ 地理信息（失败也写入）
+  let geo = { country: "未知", region: "", city: "", isp: "" };
 
   try {
     const r1 = await fetch(`https://ipwho.is/${ip}`);
@@ -61,28 +43,16 @@ export default async function handler(req, res) {
         city: g1.city || "",
         isp: g1.connection?.isp || ""
       };
-    } else {
-      throw new Error("ipwho.is failed");
     }
   } catch (e) {
-    try {
-      const r2 = await fetch(`https://ipapi.co/${ip}/json/`);
-      const g2 = await r2.json();
-
-      geo = {
-        country: g2.country_name || "未知",
-        region: g2.region || "",
-        city: g2.city || "",
-        isp: g2.org || ""
-      };
-    } catch (e2) {
-      geo = { country: "未知", region: "", city: "", isp: "" };
-    }
+    // 忽略错误，保持 geo 为默认值
   }
 
+  // ⭐ Issue 标题按日期自动生成
   const today = new Date().toISOString().slice(0, 10);
   const issueTitle = `访客记录 ${today}`;
 
+  // ⭐ 查找当天 Issue
   let issue;
   try {
     const r = await fetch(
@@ -95,6 +65,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to fetch issues", detail: e.message });
   }
 
+  // ⭐ 如果当天 Issue 不存在则创建
   if (!issue) {
     const r = await fetch(
       `https://api.github.com/repos/${GH_USER}/${GH_REPO}/issues`,
@@ -114,12 +85,13 @@ export default async function handler(req, res) {
     issue = await r.json();
   }
 
+  // ⭐ 写入记录（无论 IP 是否解析成功都写入）
   const now = new Date().toISOString();
 
   const body = `
 | 时间 | IP | 国家 | 省份 | 城市 | 运营商 | 页面 | 来源页面 | UA |
 |------|------|------|------|------|------|------|------|------|
-| ${now} | ${ip} | ${geo.country} | ${geo.region} | ${geo.city} | ${geo.isp} | ${page || "未知"} | ${referer || "未知"} | ${req.headers["user-agent"]?.substring(0, 80)} |
+| ${now} | ${ip} | ${geo.country} | ${geo.region} | ${geo.city} | ${geo.isp} | ${page} | ${referer} | ${ua.substring(0, 80)} |
 `;
 
   try {
