@@ -1,19 +1,24 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>教师后台 · 华夏小课堂</title>
-<!-- <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/dist/index.js"></script> -->
-<!-- pinyin-pro -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/index.min.js"></script> -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/dist/index.min.js"></script> -->
-<!-- <script src="./libs/pinyin-pro.min.js"></script> -->
+  <meta charset="UTF-8" />
+  <title>教师后台 · 华夏小课堂</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f5f5f5; color: #333; }
-  header {
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      min-height: 100vh;
+    }
+    
+    header {
     background: linear-gradient(135deg, #5e35b1, #311b92); color: white;
     padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -87,116 +92,175 @@
   }
   .panel-tab.active { color: #5e35b1; border-bottom: 3px solid #5e35b1; margin-bottom: -2px; font-weight: bold; }
 
-  /* ===== 登录界面 ===== */
-  .admin-lock-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  }
-  .admin-lock-card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 24px 28px;
-    width: 320px;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.35);
-    animation: fadeIn 0.25s ease-out;
-  }
-  .admin-lock-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #111827;
-  }
-  .admin-lock-subtitle {
-    font-size: 13px;
-    color: #6b7280;
-    margin-bottom: 18px;
-  }
-  .admin-lock-label {
-    font-size: 13px;
-    color: #374151;
-    margin-bottom: 6px;
-  }
-  .admin-lock-input {
-    width: 100%;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-    font-size: 14px;
-    outline: none;
-    box-sizing: border-box;
-  }
-  .admin-lock-input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
-  }
-  .admin-lock-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-    margin-bottom: 16px;
-    font-size: 13px;
-    color: #4b5563;
-  }
-  .admin-lock-btn {
-    width: 100%;
-    padding: 9px 12px;
-    border-radius: 999px;
-    border: none;
-    background: linear-gradient(135deg, #2563eb, #4f46e5);
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
-  }
-  .admin-lock-btn:hover {
-    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
-    transform: translateY(-1px);
-  }
-  .admin-lock-error {
-    margin-top: 10px;
-    font-size: 12px;
-    color: #dc2626;
-    min-height: 16px;
-  }
-  #admin-content { display: none; }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-</style>
+    /* 背景（可以放真正后台内容，这里先占位） */
+    .admin-page-shell {
+      min-height: 100vh;
+      padding: 32px;
+      color: #9ca3af;
+    }
+
+    .admin-page-shell h1 {
+      font-size: 24px;
+      margin-bottom: 12px;
+      color: #e5e7eb;
+    }
+
+    .admin-page-shell p {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* 锁屏遮罩 */
+    .admin-lock-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 55%),
+                  radial-gradient(circle at bottom, rgba(129, 140, 248, 0.22), transparent 55%),
+                  rgba(15, 23, 42, 0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(10px);
+    }
+
+    /* 卡片 */
+    .admin-lock-card {
+      background: linear-gradient(145deg, #020617, #0b1120);
+      border-radius: 18px;
+      padding: 26px 30px 24px;
+      width: 340px;
+      box-shadow:
+        0 24px 60px rgba(15, 23, 42, 0.75),
+        0 0 0 1px rgba(148, 163, 184, 0.18);
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .admin-lock-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e5e7eb;
+      margin-bottom: 4px;
+    }
+
+    .admin-lock-subtitle {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-bottom: 18px;
+    }
+
+    .admin-lock-label {
+      font-size: 13px;
+      color: #cbd5f5;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .admin-lock-input {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 9px;
+      border: 1px solid #1f2937;
+      font-size: 14px;
+      outline: none;
+      background: #020617;
+      color: #e5e7eb;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .admin-lock-input::placeholder {
+      color: #6b7280;
+    }
+
+    .admin-lock-input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55);
+      background: #020617;
+    }
+
+    .admin-lock-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .admin-lock-remember {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .admin-lock-remember input {
+      cursor: pointer;
+    }
+
+    .admin-lock-btn {
+      width: 100%;
+      border: none;
+      border-radius: 999px;
+      padding: 9px 0;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      color: #f9fafb;
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.55);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    }
+
+    .admin-lock-btn:hover {
+      filter: brightness(1.05);
+      box-shadow: 0 16px 40px rgba(37, 99, 235, 0.75);
+      transform: translateY(-1px);
+    }
+
+    .admin-lock-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 8px 22px rgba(37, 99, 235, 0.55);
+      filter: brightness(0.98);
+    }
+
+    .admin-lock-error {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #fca5a5;
+      min-height: 16px;
+    }
+
+    .admin-lock-meta {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #6b7280;
+      text-align: right;
+    }
+
+    .admin-lock-meta span {
+      opacity: 0.8;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  </style>
 </head>
 <body>
+  <!-- 真正后台内容（你以后可以换成表格、图表等） -->
 
-<!-- ===== 登录界面 ===== -->
-<div class="admin-lock-overlay" id="admin-lock">
-  <div class="admin-lock-card">
-    <div class="admin-lock-title">教师后台访问</div>
-    <div class="admin-lock-subtitle">请输入教师专用访问密码</div>
-
-    <label class="admin-lock-label" for="admin-password">访问密码</label>
-    <input id="admin-password" class="admin-lock-input" type="password" placeholder="请输入密码">
-
-    <div class="admin-lock-row">
-      <label><input type="checkbox" id="admin-remember"> 记住我（本机）</label>
-    </div>
-
-    <button class="admin-lock-btn" id="admin-submit">进入教师后台</button>
-    <div class="admin-lock-error" id="admin-error"></div>
-  </div>
-</div>
-
-<!-- ===== 教师后台内容（你的原始页面） ===== -->
-<div id="admin-content">
-
-<header>
+   <header>
   <h1>👩‍🏫 华夏小课堂 · 教师后台</h1>
   <div class="actions">
     <button onclick="window.open('../index.html','_blank')">👀 学生端</button>
@@ -245,53 +309,7 @@
   <div id="chat-list"></div>
 </div>
 
-</div><!-- admin-content END -->
-
 <script>
-/* ===== 登录逻辑 ===== */
-const HASH = "c0f5d8a3e4b7c1d9f2a6e8b4c3d1f0a9e7b5c2d4f6a8e1b3c9d0f2e4a6b8c1d";
-const STORAGE_KEY = "hx_admin_ok";
-
-function sha256(str) {
-  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str))
-    .then(buf => Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, "0")).join(""));
-}
-
-function showAdmin() {
-  document.getElementById("admin-lock").style.display = "none";
-  document.getElementById("admin-content").style.display = "block";
-}
-
-async function checkStored() {
-  if (localStorage.getItem(STORAGE_KEY) === "1") showAdmin();
-}
-
-async function handleSubmit() {
-  const pwd = document.getElementById("admin-password").value.trim();
-  const remember = document.getElementById("admin-remember").checked;
-  const errorEl = document.getElementById("admin-error");
-
-  if (!pwd) {
-    errorEl.textContent = "请输入密码";
-    return;
-  }
-
-  const hash = await sha256(pwd);
-  if (hash === HASH) {
-    if (remember) localStorage.setItem(STORAGE_KEY, "1");
-    showAdmin();
-  } else {
-    errorEl.textContent = "密码错误";
-  }
-}
-
-document.getElementById("admin-submit").onclick = handleSubmit;
-document.getElementById("admin-password").onkeydown = e => { if (e.key === "Enter") handleSubmit(); };
-checkStored();
-
-/* ===== 原始后台 JS（完整保留） ===== */
-/* 你的 GitHubChat、GitHubVisitor、loadVisitors、renderVisitorTable 等全部保留 */
-
 // ===== 通用工具 =====
 function showPanel(name) {
   document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
@@ -683,5 +701,92 @@ function escapeHtml(s) {
 showPanel('editor');
 </script>
 
+
+  <!-- 登录遮罩 -->
+  <div class="admin-lock-overlay" id="admin-lock">
+    <div class="admin-lock-card">
+      <div class="admin-lock-title">教师访问密码</div>
+      <div class="admin-lock-subtitle">请输入教师专用密码以进入后台（学生请勿操作）。</div>
+
+      <form id="admin-login-form">
+        <label class="admin-lock-label" for="admin-password">访问密码</label>
+        <input
+          id="admin-password"
+          class="admin-lock-input"
+          type="password"
+          placeholder="请输入密码"
+          autocomplete="current-password"
+        />
+
+        <div class="admin-lock-row">
+          <label class="admin-lock-remember">
+            <input type="checkbox" id="admin-remember" />
+            记住本机登录状态
+          </label>
+          <span>华夏小课堂 · 教师后台</span>
+        </div>
+
+        <button type="submit" class="admin-lock-btn">进入教师后台</button>
+        <div class="admin-lock-error" id="admin-error"></div>
+        <div class="admin-lock-meta">
+          <span>如果忘记密码，请联系站点维护者。</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const PASSWORD = "huaxia2026"; // 明文密码，简单直接，先保证可用
+      const STORAGE_KEY = "hx_admin_unlocked";
+
+      const overlay = document.getElementById("admin-lock");
+      const form = document.getElementById("admin-login-form");
+      const input = document.getElementById("admin-password");
+      const remember = document.getElementById("admin-remember");
+      const errorBox = document.getElementById("admin-error");
+
+      // 如果之前勾选了“记住本机登录状态”，自动跳过密码
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved === "1") {
+          overlay.style.display = "none";
+        }
+      } catch (e) {
+        // 某些浏览器隐私模式可能禁止 localStorage，忽略即可
+      }
+
+      // 聚焦输入框
+      input.focus();
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const value = input.value.trim();
+
+        if (!value) {
+          errorBox.textContent = "请输入密码。";
+          input.focus();
+          return;
+        }
+
+        if (value === PASSWORD) {
+          errorBox.textContent = "";
+          overlay.style.display = "none";
+
+          // 记住本机登录状态
+          if (remember.checked) {
+            try {
+              localStorage.setItem(STORAGE_KEY, "1");
+            } catch (e) {
+              // 忽略存储错误
+            }
+          }
+        } else {
+          errorBox.textContent = "密码错误，请重试。";
+          input.select();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
