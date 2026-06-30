@@ -1,6 +1,18 @@
 export default async function handler(req, res) {
   // ⭐ 允许 GitHub Pages 调用 Vercel API（跨域）
-  res.setHeader("Access-Control-Allow-Origin", "https://always001.github.io");
+  //res.setHeader("Access-Control-Allow-Origin", "https://always001.github.io");
+  const origin = req.headers.origin;
+
+  const allowedOrigins = [
+    "https://always001.github.io",
+    "https://huaxia-classroom.vercel.app",
+    "https://huaxia-classroom-pzaxy2fv6-fengling350300-2749s-projects.vercel.app"
+  ];
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
