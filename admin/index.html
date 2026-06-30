@@ -4,13 +4,86 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>教师后台 · 华夏小课堂</title>
-
+<!-- <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/dist/index.js"></script> -->
 <!-- pinyin-pro -->
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.0/index.min.js"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f5f5f5; color: #333; }
+  header {
+    background: linear-gradient(135deg, #5e35b1, #311b92); color: white;
+    padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 22px; font-family: 楷体; }
+  header .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  header button {
+    background: rgba(255,255,255,0.2); color: white; border: 1px solid white;
+    padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px;
+  }
+  header button.primary { background: white; color: #5e35b1; font-weight: bold; }
+  header button.success { background: #4caf50; color: white; border-color: #4caf50; }
+
+  .panel { padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .panel h2 { color: #5e35b1; margin-bottom: 12px; }
+  .panel p { color: #666; font-size: 13px; margin-bottom: 12px; }
+
+  .btn {
+    padding: 10px 20px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: bold; margin-right: 8px;
+  }
+  .btn-primary { background: linear-gradient(135deg, #7e57c2, #4527a0); color: white; }
+  .btn-success { background: linear-gradient(135deg, #66bb6a, #2e7d32); color: white; }
+  .btn-secondary { background: #f0f0f0; color: #333; }
+  .btn-danger { background: #ef5350; color: white; }
+  .btn:hover { transform: translateY(-2px); }
+
+  input, select, textarea {
+    padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; margin-top: 16px;
+    background: white; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  th { background: #7e57c2; color: white; padding: 12px; text-align: left; font-size: 13px; }
+  td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+  tr:hover { background: #fafafa; }
+  .country-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    background: #ede7f6; color: #5e35b1; font-size: 11px; margin-left: 6px;
+  }
+  .ip-tag {
+    font-family: monospace; background: #f5f5f5; padding: 2px 6px; border-radius: 4px;
+  }
+
+  .empty { text-align: center; padding: 40px; color: #888; }
+  .loading { text-align: center; padding: 40px; color: #5e35b1; }
+
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
+  }
+  .filter-bar input, .filter-bar select { margin: 0; }
+
+  .stat-card {
+    display: inline-block; padding: 12px 20px; margin: 4px;
+    background: white; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .stat-card .num { font-size: 24px; font-weight: bold; color: #5e35b1; }
+  .stat-card .label { font-size: 12px; color: #666; }
+
+  .panel-tabs {
+    display: flex; gap: 8px; margin-bottom: 16px;
+    border-bottom: 2px solid #f0f0f0;
+  }
+  .panel-tab {
+    padding: 10px 20px; cursor: pointer; background: none; border: none;
+    font-size: 14px; color: #888;
+  }
+  .panel-tab.active { color: #5e35b1; border-bottom: 3px solid #5e35b1; margin-bottom: -2px; font-weight: bold; }
 
   /* ===== 登录界面 ===== */
   .admin-lock-overlay {
@@ -174,7 +247,7 @@
 
 <script>
 /* ===== 登录逻辑 ===== */
-const HASH = "b3f6d1e0f1a4c8d9e2b7c4a1f0d3e6b5c7a8f9e0d1c2b3a4e5f6d7c8b9a0f1e";
+const HASH = "const HASH = "c0f5d8a3e4b7c1d9f2a6e8b4c3d1f0a9e7b5c2d4f6a8e1b3c9d0f2e4a6b8c1d";
 const STORAGE_KEY = "hx_admin_ok";
 
 function sha256(str) {
@@ -606,13 +679,6 @@ function escapeHtml(s) {
 
 // 默认显示编辑面板
 showPanel('editor');
-
-
-
-
-
-
-
 </script>
 
 </body>
