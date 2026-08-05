@@ -1,0 +1,20 @@
+[
+  {
+    "id": "pinyin-match",
+    "title": "拼音消消乐",
+    "icon": "🧩",
+    "desc": "拼音消消乐游戏"
+  },
+  {
+    "id": "tianzige-trace",
+    "title": "田字格描红",
+    "icon": "✏️",
+    "desc": "田字格描红游戏"
+  },
+  {
+    "id": "idiom-chain",
+    "title": "成语接龙",
+    "icon": "🔗",
+    "desc": "成语接龙游戏"
+  },
+]
