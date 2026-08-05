@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>教师后台 · 华夏小课堂</title>
+  <title>后台管理 · 华夏小课堂</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * {
@@ -256,7 +256,7 @@
   <!-- 真正后台内容（你以后可以换成表格、图表等） -->
 
    <header>
-  <h1>👩‍🏫 华夏小课堂 · 教师后台</h1>
+  <h1>👩‍🏫 华夏小课堂 · 后台管理</h1>
   <div class="actions">
     <button onclick="window.open('../index.html','_blank')">👀 学生端</button>
     <button onclick="showPanel('editor')">✏️ 编辑文章</button>
@@ -269,7 +269,7 @@
 <div id="panel-editor" class="panel" style="display:none;">
   <h2>✏️ 编辑文章</h2>
   <p>（编辑器保留原有功能，本版本专注美化访问记录面板）</p>
-  <p>👉 老师可以用学生端的「⚙️ 配置」按钮配置 GitHub，然后在这里查看数据。</p>
+  <p>👉 管理员可以用学生端的「⚙️ 配置」按钮配置 GitHub，然后在这里查看数据。</p>
 </div>
 
 <!-- 访问记录面板 -->
@@ -700,8 +700,8 @@ showPanel('editor');
   <!-- 登录遮罩 -->
   <div class="admin-lock-overlay" id="admin-lock">
     <div class="admin-lock-card">
-      <div class="admin-lock-title">教师访问密码</div>
-      <div class="admin-lock-subtitle">请输入教师专用密码以进入后台（学生请勿操作）。</div>
+      <div class="admin-lock-title">管理员访问密码</div>
+      <div class="admin-lock-subtitle">请输入管理员专用密码以进入后台（非管理员请勿操作）。</div>
 
       <form id="admin-login-form">
         <label class="admin-lock-label" for="admin-password">访问密码</label>
@@ -718,10 +718,10 @@ showPanel('editor');
             <input type="checkbox" id="admin-remember" />
             记住本机登录状态
           </label>
-          <span>华夏小课堂 · 教师后台</span>
+          <span>华夏小课堂 · 后台管理</span>
         </div>
 
-        <button type="submit" class="admin-lock-btn">进入教师后台</button>
+        <button type="submit" class="admin-lock-btn">进入后台管理</button>
         <div class="admin-lock-error" id="admin-error"></div>
         <div class="admin-lock-meta">
           <span>如果忘记密码，请联系站点维护者。</span>
