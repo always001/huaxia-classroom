@@ -1,0 +1,51 @@
+[
+  {
+    "id": "reading_0001",
+    "title": "数学里的故事",
+    "desc": "从考试题回到语言本身，看看数学是怎么讲故事的。",
+    "category": "学习",
+    "cover": "/covers/math_story.jpg"
+  },
+  {
+    "id": "reading_0002",
+    "title": "成语背后的智慧",
+    "desc": "成语不是死记硬背，而是中国人的思维方式。",
+    "category": "故事",
+    "cover": "/covers/cover2.jpg"
+  },
+  {
+    "id": "reading_0003",
+    "title": "文字里的温度",
+    "desc": "文字看似冰冷，却能传递温度。",
+    "category": "思考",
+    "cover": "/covers/cover3.jpg"
+  },
+  {
+    "id": "reading_0004",
+    "title": "内在形象与个人品牌",
+    "desc": "内在形象：真正决定你是谁。",
+    "category": "思考",
+    "cover": "/covers/cover4.jpg"
+  },
+  {
+    "id": "reading_0005",
+    "title": "修炼内在形象的四大路径",
+    "desc": "性格与修养，陶冶与净化。",
+    "category": "思考",
+    "cover": "/covers/cover5.jpg"
+  },
+  {
+    "id": "reading_0006",
+    "title": "同情心与为他人着想：优雅的核心",
+    "desc": "优雅是一种影响力。",
+    "category": "思考",
+    "cover": "/covers/cover6.jpg"
+  },
+  {
+    "id": "reading_0007",
+    "title": "推销自己与打造个人品牌",
+    "desc": "个人品牌：让你成为不可替代的人。",
+    "category": "思考",
+    "cover": "/covers/cover7.jpg"
+  }
+]

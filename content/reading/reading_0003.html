@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>华夏小书房 · 第3篇</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="reading.css">
+</head>
+<body>
+
+<div class="article-header">
+  <h1 id="article-title">文字里的温度</h1>
+
+  <div class="article-actions">
+    <button id="btnRead">🔊 AI朗读本页</button>
+    <button id="btnStop">⏹ 停止朗读</button>
+    <button id="toggleMode">切换阅读模式</button>   <!-- ⭐ 放这里 -->
+    <button id="toggleNight">🌙 夜间模式</button>
+    <button id="toggleEye">👀 护眼模式</button>
+    <button id="fontPlus">A+</button>
+    <button id="fontMinus">A-</button>
+  </div>
+  <!-- 📤 GitHub 阅读进度同步 -->
+  <button id="btnSync">📤 同步阅读进度到 GitHub</button>
+  <div id="sync-qrcode"></div>
+</div>
+
+<script>
+  //const ARTICLE_ID = 'reading_0003';  // ← 每篇文章唯一 ID
+  // ⭐ 每篇文章必须不同
+  const ARTICLE_ID = location.pathname.split("/").pop().replace(".html", "");
+  // ⭐ 自动从页面标题读取文章名
+  const ARTICLE_TITLE = document.getElementById("article-title").innerText;
+
+  // ⭐ 写入最近阅读记录
+  const history = JSON.parse(localStorage.getItem("reading_history") || "[]");
+
+  history.unshift({
+    id: ARTICLE_ID,
+    title: ARTICLE_TITLE,
+    time: Date.now()
+  });
+
+  localStorage.setItem("reading_history", JSON.stringify(history));
+
+  // ⭐ 写入阅读时长（示例：每 5 秒累加）
+  let seconds = 0;
+  setInterval(() => {
+    seconds++;
+    localStorage.setItem(`reading_time_${ARTICLE_ID}`, seconds);
+  }, 1000);
+</script>
+
+<!-- ⭐ 顶部进度条（必须有） -->
+<div id="progress-bar">
+  <div id="progress-inner"></div>
+</div>
+
+<!-- ⭐ 分页按钮（分页模式才显示） -->
+<div id="pagedControls" class="paged-controls" style="display:none;">
+  <button id="prevPageBtn">⬅ 上一页</button>
+  <span id="pageInfo">第 1 / 1 页</span>
+  <button id="nextPageBtn">下一页 ➡</button>
+</div>
+
+<article id="articleContent" class="article-content">
+
+  <p>文字是一种奇妙的存在，它看似冰冷，却能传递温度；看似静止，却能带来力量。每一个字，都像是一粒种子，落在不同的人心里，会长出完全不同的形状。</p>
+
+  <p>有些文字像阳光，照亮你阴霾的日子；有些文字像雨水，悄悄滋润你干涸的心；有些文字像风，吹散你积压已久的烦恼；还有些文字像火焰，让你重新燃起前行的勇气。</p>
+
+  <p>当我们读到一句恰到好处的话，它会像是有人轻轻拍了拍你的肩，对你说：“我懂你。”这种被理解的感觉，是文字最温柔的力量。</p>
+
+  <p>文字的温度来自作者，也来自读者。作者写下时的心情，会藏在字里行间；读者读到时的状态，会决定文字的意义。文字不是单向的，它是一场跨越时间的对话。</p>
+
+  <p>在快节奏的时代里，我们常常忽略了文字的力量。我们读得快、写得快、想得快，却忘了停下来，让文字慢慢进入心里。只有慢下来，文字才会变得有温度。</p>
+
+  <p>当你愿意用心去读，你会发现，文字不仅能记录世界，也能治愈世界。它们能陪你走过孤独的夜晚，也能在你迷茫的时候给你方向。</p>
+
+  <p>愿你在文字里找到力量，也愿你在文字里找到自己。</p>
+
+</article>
+<div class="rating-box">
+  <div class="rating-stars" data-article-id="reading_0003">
+  </div>
+  <div class="rating-text">点击星星评分</div>
+</div>
+
+<!-- 翻页按钮 -->
+<!-- <div class="pager"> -->
+<!--   <button id="prevPage">⬅ 上一页</button> -->
+<!--   <span id="pageInfo"></span> -->
+<!--   <button id="nextPage">下一页 ➡</button> -->
+<!-- </div> -->
+
+<!-- ⭐⭐ 在这里放 JS ⭐⭐ -->
+
+<script src="reading.js"></script>
+</body>
+</html>

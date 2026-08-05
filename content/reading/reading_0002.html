@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>华夏小书房 · 第2篇</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="reading.css">
+</head>
+<body>
+
+<div class="article-header">
+  <h1 id="article-title">成语背后的智慧</h1>
+
+  <div class="article-actions">
+    <button id="btnRead">🔊 AI朗读本页</button>
+    <button id="btnStop">⏹ 停止朗读</button>
+    <button id="toggleMode">切换阅读模式</button>   <!-- ⭐ 放这里 -->
+    <button id="toggleNight">🌙 夜间模式</button>
+    <button id="toggleEye">👀 护眼模式</button>
+    <button id="fontPlus">A+</button>
+    <button id="fontMinus">A-</button>
+  </div>
+  <!-- 📤 GitHub 阅读进度同步 -->
+  <button id="btnSync">📤 同步阅读进度到 GitHub</button>
+  <div id="sync-qrcode"></div>
+</div>
+
+<!-- ⭐ 每篇文章唯一 ID -->
+<script>
+  //const ARTICLE_ID = 'reading_0002';  // ← 每篇文章唯一 ID
+  // ⭐ 每篇文章必须不同
+  const ARTICLE_ID = location.pathname.split("/").pop().replace(".html", "");
+  // ⭐ 自动从页面标题读取文章名
+  const ARTICLE_TITLE = document.getElementById("article-title").innerText;
+
+  // ⭐ 写入最近阅读记录
+  const history = JSON.parse(localStorage.getItem("reading_history") || "[]");
+
+  history.unshift({
+    id: ARTICLE_ID,
+    title: ARTICLE_TITLE,
+    time: Date.now()
+  });
+
+  localStorage.setItem("reading_history", JSON.stringify(history));
+
+  // ⭐ 写入阅读时长（示例：每 5 秒累加）
+  let seconds = 0;
+  setInterval(() => {
+    seconds++;
+    localStorage.setItem(`reading_time_${ARTICLE_ID}`, seconds);
+  }, 1000);
+</script>
+
+<!-- ⭐ 顶部进度条（必须有） -->
+<div id="progress-bar">
+  <div id="progress-inner"></div>
+</div>
+
+<!-- ⭐ 分页按钮（分页模式才显示） -->
+<div id="pagedControls" class="paged-controls" style="display:none;">
+  <button id="prevPageBtn">⬅ 上一页</button>
+  <span id="pageInfo">第 1 / 1 页</span>
+  <button id="nextPageBtn">下一页 ➡</button>
+</div>
+
+<!-- ⭐ 正文内容（自动分页） -->
+<article id="articleContent" class="article-content">
+
+  <p>成语是汉语世界里最精炼的语言形式，它往往只有寥寥几个字，却能讲述一个完整的故事，传递一种深刻的智慧。成语不是简单的词语，而是历史、文化与人心的浓缩。</p>
+
+  <p>比如“守株待兔”，它讲的是一个农夫偶然捡到一只撞死在树桩上的兔子，于是每天守在树桩旁，希望好运再次降临。这个故事告诉我们，侥幸不会重复，真正的收获来自主动的努力，而不是等待奇迹。</p>
+
+  <p>再比如“刻舟求剑”，一个人在船上掉了剑，竟然在船身刻记号，想靠记号找回沉入水中的剑。这个故事提醒我们，世界在变化，方法也必须随之改变，固守旧法只会让问题越来越远。</p>
+
+  <p>“拔苗助长”讲的是急于求成的危害。农夫为了让庄稼长得更快，竟然把幼苗往上拔，结果全部枯死。它告诉我们，成长有自己的节奏，任何试图加速的行为，都可能破坏本来的生命力。</p>
+
+  <p>“塞翁失马”则是另一种智慧。老人丢了马，邻居来安慰，他却说未必是坏事。后来马带回了好马，邻居来祝贺，他又说未必是好事。故事告诉我们，人生的得失并非绝对，表面的好与坏常常会互相转化。</p>
+
+  <p>成语的力量在于，它们不是抽象的道理，而是具体的故事。故事让道理变得鲜活，让智慧变得可感，让语言变得有温度。</p>
+
+  <p>当我们读懂成语，我们读懂的不只是语言，而是古人的生活、思考与经验。成语是跨越千年的对话，是古人留给我们的智慧礼物。</p>
+
+  <p>在快节奏的现代生活里，成语提醒我们停下来，看看那些被时间打磨过的思想。它们或许简单，却往往比复杂的理论更贴近生活，更贴近人心。</p>
+
+  <p>成语背后的智慧，不只是过去的智慧，也是今天的智慧。只要我们愿意倾听，它们依然能照亮我们的选择，陪伴我们的成长。</p>
+
+</article>
+<div class="rating-box">
+  <div class="rating-stars" data-article-id="reading_0002">
+  </div>
+  <div class="rating-text">点击星星评分</div>
+</div>
+
+<!-- 翻页按钮 -->
+<!-- <div class="pager"> -->
+<!--   <button id="prevPage">⬅ 上一页</button> -->
+<!--   <span id="pageInfo"></span> -->
+<!--   <button id="nextPage">下一页 ➡</button> -->
+<!-- </div> -->
+
+<!-- ⭐⭐ 在这里放 JS ⭐⭐ -->
+
+<script src="reading.js"></script>
+</body>
+</html>

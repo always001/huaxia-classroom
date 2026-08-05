@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>📚 华夏小书房</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="reading.css">
+</head>
+<body data-page="reading">
+
+<div id="menu-btn">⋮</div>
+<div id="menu-panel">
+  <a href="settings.html">⚙️ 设置中心</a>
+</div>
+
+<div class="reading-header">
+  <h1>📚 华夏小书房</h1>
+  <p>用文字和声音慢慢读世界</p>
+</div>
+<div id="daily-quote" class="daily-quote"></div>
+<button onclick="resetAllReadingData()" class="reset-btn" style="background:#d63031; color: #fff; border-radius: 10px;">
+  🔄 重置
+</button>
+<!-- 🏅 首页加搜索框模块 -->
+<h2>🔍 搜索文章</h2>
+<input id="search-input" class="search-input" placeholder="输入标题或简介关键字">
+<div id="search-result" class="search-result"></div>
+<!-- 🏅 首页加容器 阅读排行榜模块 -->
+<h2>🏆 阅读排行榜</h2>
+<div id="ranking" class="ranking"></div>
+<!-- 🏅 阅读成就模块 -->
+<h2>🏅 阅读成就</h2>
+<div id="achievements" class="achievements"></div>
+
+<!-- ⭐ 最近阅读模块（必须放在 book-list 外面） -->
+<h2>📖 最近阅读</h2>
+<div id="recent-list" class="recent-list"></div>
+
+
+<!-- ⭐ 自动生成文章卡片 -->
+<h2>📚 全部文章</h2>
+<div id="book-list" class="book-list"></div>
+
+<!-- ⭐ 自动生成卡片 -->
+<!-- <script src="reading.js"></script>  -->
+<!-- ✅ 可以，而且这是微信浏览器最有效、最强制的刷新方式 -->
+ 
+<script>
+  const s = document.createElement("script");
+  s.src = "/content/reading/reading.js?v=" + Date.now();
+  document.body.appendChild(s);
+</script>
+<script>
+  // 当用户通过浏览器“返回”回到这个页面时，如果是从 bfcache 恢复，就强制刷新
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted) {
+      // 从缓存恢复（后退/前进），强制刷新
+      location.reload();
+    }
+  });
+</script>
+
+</body>
+</html>

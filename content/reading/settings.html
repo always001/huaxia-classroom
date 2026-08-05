@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>⚙️ 设置中心 · 华夏小书房</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="reading.css">
+</head>
+<body data-page="settings">
+
+<div class="settings-container">
+  <h1>⚙️ 设置中心</h1>
+  <p class="settings-desc">管理你的阅读偏好、主题、缓存与数据。</p>
+
+  <div class="settings-section">
+    <h2>🎨 阅读主题</h2>
+    <button id="themeKindle" class="settings-btn">📖 Kindle 风格</button>
+    <button id="themeWechat" class="settings-btn">📘 微信读书风格</button>
+  </div>
+
+  <div class="settings-section">
+    <h2>🧹 数据管理</h2>
+    <button onclick="resetReadingSystem()" class="danger-btn">
+      🔄 重置阅读系统（安全）
+    </button>
+  </div>
+
+  <div class="settings-section">
+    <h2>📚 返回书架</h2>
+    <a href="reading_index.html" class="settings-btn">🏠 返回首页</a>
+  </div>
+</div>
+
+<!-- <script src="reading.js?v=SETTINGS"></script> -->
+<script>
+  const s = document.createElement("script");
+  s.src = "reading.js?v=" + Date.now();
+  document.body.appendChild(s);
+</script>
+
+
+</body>
+</html>
