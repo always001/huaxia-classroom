@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数学宇宙 · Talent</title>
+<style>
+:root{
+  --bg:#050816;
+  --card:#111827;
+  --accent:#6366F1;
+  --accent-soft:rgba(99,102,241,.2);
+  --border:rgba(255,255,255,.08);
+  --text:#F9FAFB;
+  --muted:#9CA3AF;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:radial-gradient(circle at top,#1F2937 0,#050816 40%,#000 100%);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+}
+#app{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+.top{
+  height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(12px);
+  background:linear-gradient(to right,rgba(15,23,42,.9),rgba(17,24,39,.9));
+}
+.top-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.av{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  background:radial-gradient(circle at 30% 0,#F97316,#EF4444);
+}
+.top-mid{
+  display:flex;
+  flex-direction:column;
+}
+.top-mid span:nth-child(1){
+  font-weight:600;
+}
+.top-mid span:nth-child(2){
+  font-size:12px;
+  color:var(--muted);
+}
+.top-right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  color:var(--muted);
+}
+.badge{
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:rgba(15,23,42,.8);
+}
+.page{
+  position:absolute;
+  inset:64px 0 64px 0;
+  display:none;
+  overflow:auto;
+  padding:16px;
+}
+.page.on{
+  display:block;
+}
+.card{
+  min-height: /* 160px */ auto;
+  background:var(--card);
+  border-radius:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  box-shadow:0 18px 40px rgba(0,0,0,.6);
+  overflow: visible !important;
+  position: relative;
+}
+
+.card svg {
+    overflow: visible !important;
+    //display: block;
+    width: 100% !important;
+    height: 300px !important;  /* ⭐ 关键：让图表有空间120px→260px */
+    min-height: 120px !important; /* 120px→260px */
+    //position: relative;
+    //z-index: 9999;
+    //background: rgba(255,255,255,0.05); /* ⭐ 超关键：让白线显现出来 */
+}
+
+.card-title{
+  font-size:18px;
+  font-weight:600;
+  margin-bottom:6px;
+}
+.card-sub{
+  font-size:13px;
+  color:var(--muted);
+}
+.grid2{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.btn{
+  padding:10px 14px;
+  border-radius:999px;
+  border:none;
+  background:var(--accent);
+  color:#fff;
+  font-size:14px;
+  cursor:pointer;
+}
+.btn.outline{
+  background:transparent;
+  border:1px solid var(--accent-soft);
+}
+.btn.full{
+  width:100%;
+}
+.btn:hover{
+  opacity:.9;
+}
+.nav{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:64px;
+  background:rgba(15,23,42,.95);
+  border-top:1px solid var(--border);
+  display:flex;
+}
+.ntab{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  color:var(--muted);
+  cursor:pointer;
+}
+.ntab span:nth-child(1){
+  font-size:20px;
+}
+.ntab.on{
+  color:var(--accent);
+}
+.section-title{
+  font-size:16px;
+  font-weight:600;
+  margin-bottom:8px;
+}
+.section-sub{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:12px;
+}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:rgba(15,23,42,.9);
+  font-size:12px;
+  margin:4px 4px 0 0;
+}
+.chip span:nth-child(1){
+  font-size:16px;
+}
+.msg{
+  padding:8px 10px;
+  border-radius:12px;
+  margin:6px 0;
+  max-width:80%;
+  font-size:13px;
+  line-height:1.5;
+}
+.msg.me{
+  margin-left:auto;
+  background:var(--accent);
+}
+.msg.ai{
+  background:#111827;
+}
+#chatArea{
+  height:260px;
+  overflow-y:auto;
+  border-radius:12px;
+  border:1px solid var(--border);
+  padding:10px;
+  background:rgba(15,23,42,.7);
+}
+.input-row{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+.input-row input{
+  flex:1;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:var(--text);
+  font-size:13px;
+}
+.input-row input::placeholder{
+  color:#4B5563;
+}
+.list{
+  font-size:13px;
+}
+.list-item{
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:rgba(15,23,42,.8);
+  margin-bottom:6px;
+}
+.list-item-title{
+  font-weight:500;
+}
+.list-item-sub{
+  font-size:12px;
+  color:var(--muted);
+}
+.modal-mask{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+.modal-mask.on{
+  display:flex;
+}
+.modal{
+  width:90%;
+  max-width:360px;
+  background:var(--card);
+  border-radius:16px;
+  padding:16px;
+  border:1px solid var(--border);
+}
+.modal h3{
+  margin:0 0 10px;
+  font-size:16px;
+}
+.modal input, .modal select{
+  width:100%;
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:var(--text);
+  font-size:13px;
+  margin-bottom:8px;
+}
+.modal button{
+  margin-top:4px;
+}
+#toast{
+  position:fixed;
+  bottom:80px;
+  left:0;
+  right:0;
+  text-align:center;
+  z-index:1000;
+}
+#toast .t{
+  display:inline-block;
+  padding:8px 12px;
+  border-radius:999px;
+  background:#111827;
+  color:#F9FAFB;
+  font-size:13px;
+  margin-top:4px;
+}
+#toast .t.s{background:#22C55E;}
+#toast .t.e{background:#EF4444;}
+#kgSvg{
+  width:100%;
+  height:220px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  background:radial-gradient(circle at 20% 0,#1D4ED8,#020617);
+}
+.kg-node{
+  fill:#F97316;
+}
+.kg-link{
+  stroke:#93C5FD;
+  stroke-width:1.2;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- 顶部栏 -->
+<div class="top">
+  <div class="top-left">
+    <div class="av" id="hAv">🦊</div>
+    <div class="top-mid">
+      <span id="hName">小天才</span>
+      <span id="hGrade">一年级 · 数学宇宙</span>
+    </div>
+  </div>
+  <div class="top-right">
+    <div class="badge" id="hLv">Lv1</div>
+    <div class="badge" id="hXp">0 XP</div>
+  </div>
+</div>
+
+<!-- 页面：主页 -->
+<div class="page on" id="p-home">
+  <div class="card">
+    <div class="card-title">本周学习宇宙</div>
+    <div class="card-sub">这是你的数学宇宙总览，所有游戏、错题、计划都会在这里汇总。</div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card">
+        <div class="section-title">学习时间</div>
+        <div class="section-sub">本周累计</div>
+        <div id="sTime" style="font-size:22px;font-weight:600">0 分钟</div>
+      </div>
+      <div class="card">
+        <div class="section-title">做题数量</div>
+        <div class="section-sub">本周总题数</div>
+        <div id="sCnt" style="font-size:22px;font-weight:600">0 题</div>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card">
+        <div class="section-title">正确率</div>
+        <div class="section-sub">最近 50 题</div>
+        <div id="sAcc" style="font-size:22px;font-weight:600">0%</div>
+      </div>
+      <div class="card">
+        <div class="section-title">奥数进度</div>
+        <div class="section-sub">闯关进度</div>
+        <div id="sAdv" style="font-size:22px;font-weight:600">0%</div>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn" onclick="go('p-games')">进入游戏中心</button>
+      <button class="btn outline" onclick="go('p-ai')" style="margin-left:8px">问问 AI 天师</button>
+    </div>
+  </div>
+
+  <div style="margin-top:16px" class="card">
+    <div class="section-title">今日任务</div>
+    <div class="section-sub">从下面选一个开始吧，完成后会记录在你的宇宙档案里。</div>
+    <div class="list" id="homeTasks"></div>
+  </div>
+</div>
+
+<!-- 页面：游戏中心 -->
+<div class="page" id="p-games">
+  <div class="card">
+    <div class="card-title">游戏中心</div>
+    <div class="card-sub">这里是你的数学游乐场，每个游戏对应一个知识星球。</div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card">
+        <div class="section-title">披萨大作战</div>
+        <div class="section-sub">分数 · 把披萨分给小动物们。</div>
+        <button class="btn full" onclick="startGame('pizza')">开始游戏</button>
+      </div>
+      <div class="card">
+        <div class="section-title">太空乘法</div>
+        <div class="section-sub">乘法 · 在宇宙飞船上做乘法题。</div>
+        <button class="btn full" onclick="startGame('space')">开始游戏</button>
+      </div>
+      <div class="card">
+        <div class="section-title">数字侦探</div>
+        <div class="section-sub">逻辑 · 找出可疑数字。</div>
+        <button class="btn full" onclick="startGame('detective')">开始游戏</button>
+      </div>
+      <div class="card">
+        <div class="section-title">几何大师</div>
+        <div class="section-sub">几何 · 认识形状和面积。</div>
+        <button class="btn full" onclick="startGame('geo')">开始游戏</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px" class="card">
+    <div class="section-title">最近游戏记录</div>
+    <div class="section-sub">每次游戏都会记录在这里，方便你和家长一起回顾。</div>
+    <div class="list" id="gameLogs"></div>
+  </div>
+</div>
+
+<!-- 页面：AI 天师 -->
+<div class="page" id="p-ai">
+  <div class="card">
+    <div class="card-title">AI 天师</div>
+    <div class="card-sub">不会的题目、想问的概念，都可以在这里问我。</div>
+    <div id="aiChips" style="margin-top:8px"></div>
+    <div id="chatArea" style="margin-top:10px"></div>
+    <div class="input-row">
+      <input id="aiInp" placeholder="输入题目或问题，例如：这道分数题怎么做？">
+      <button class="btn" onclick="sendAI()">发送</button>
+    </div>
+  </div>
+</div>
+
+<!-- 页面：错题本 -->
+<div class="page" id="p-errs">
+  <div class="card">
+    <div class="card-title">错题本</div>
+    <div class="card-sub">每一道错题都是一个新的星球，整理好它们，下次就不会再迷路。</div>
+    <button class="btn" onclick="openModal('errM')" style="margin-top:8px">添加错题</button>
+    <button class="btn outline" onclick="startErrRev()" style="margin-top:8px">错题复习</button>
+    <button class="btn outline" onclick="openModal('errSearchM')" style="margin-top:8px">搜索错题</button>
+    <div class="list" id="errList" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- 页面：学习计划 -->
+<div class="page" id="p-sch">
+  <div class="card" style="margin-top:12px">
+    <div class="section-title">本周课表</div>
+    <div id="schCalendar" class="section-sub" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="section-title">距离下一次学习</div>
+    <div id="schCountdown" style="font-size:20px;font-weight:600;margin-top:6px">计算中…</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">学习计划</div>
+    <div class="card-sub">像排宇宙航班一样排好你的学习时间。</div>
+    <button class="btn" onclick="openModal('schM')" style="margin-top:8px">添加计划</button>
+    <div class="list" id="schList" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- 弹窗：披萨大作战 -->
+<div id="pizzaM" class="modal-mask">
+  <div class="modal">
+    <h3>披萨大作战</h3>
+    <div id="pizzaQ" style="margin-top:8px;font-size:14px;"></div>
+    <input id="pizzaAns" placeholder="请输入分数，例如：3/4">
+    <div id="pizzaTip" class="section-sub" style="margin-top:6px"></div>
+    <button class="btn full" onclick="submitPizza()">提交答案</button>
+    <button class="btn outline full" onclick="closePizza()" style="margin-top:6px">结束本局</button>
+  </div>
+</div>
+
+<!-- 太空乘法弹窗 -->
+<div id="spaceM" class="modal-mask">
+  <div class="modal">
+    <h3>太空乘法</h3>
+    <div id="spaceQ" style="margin-top:8px;font-size:14px;"></div>
+    <input id="spaceAns" placeholder="请输入答案，例如：24">
+    <button class="btn full" onclick="submitSpace()">提交答案</button>
+    <button class="btn outline full" onclick="closeSpace()" style="margin-top:6px">结束本局</button>
+  </div>
+</div>
+
+<!-- 数字侦探弹窗 -->
+<div id="detectM" class="modal-mask">
+  <div class="modal">
+    <h3>数字侦探</h3>
+    <div id="detectQ" style="margin-top:8px;font-size:14px;"></div>
+    <input id="detectAns" placeholder="请输入可疑数字，例如：14">
+    <button class="btn full" onclick="submitDetect()">提交答案</button>
+    <button class="btn outline full" onclick="closeDetect()" style="margin-top:6px">结束本局</button>
+  </div>
+</div>
+
+<!-- 几何大师弹窗 -->
+<div id="geoM" class="modal-mask">
+  <div class="modal">
+    <h3>几何大师</h3>
+    <div id="geoQ" style="margin-top:8px;font-size:14px;"></div>
+    <input id="geoAns" placeholder="请输入面积，例如：24">
+    <button class="btn full" onclick="submitGeo()">提交答案</button>
+    <button class="btn outline full" onclick="closeGeo()" style="margin-top:6px">结束本局</button>
+  </div>
+</div>
+
+<!-- 错题解析弹窗 -->
+<div id="errViewM" class="modal-mask">
+  <div class="modal">
+    <h3>错题解析</h3>
+    <div id="errViewQ" style="margin-top:8px;font-size:14px;"></div>
+    <div id="errViewA" class="section-sub" style="margin-top:6px;"></div>
+    <button class="btn full" onclick="closeModal('errViewM')">关闭</button>
+  </div>
+</div>
+
+<!-- 错题复习弹窗 -->
+<div id="errRevM" class="modal-mask">
+  <div class="modal">
+    <h3>错题复习</h3>
+    <div id="errRevQ" style="margin-top:8px;font-size:14px;"></div>
+    <input id="errRevAns" placeholder="请输入你的答案">
+    <button class="btn full" onclick="submitErrRev()">提交答案</button>
+    <button class="btn outline full" onclick="closeErrRev()" style="margin-top:6px">结束复习</button>
+  </div>
+</div>
+
+<!-- 错题搜索弹窗 -->
+<div id="errSearchM" class="modal-mask">
+  <div class="modal">
+    <h3>搜索错题</h3>
+    <input id="errSearchInp" placeholder="输入关键词，例如：分数">
+    <button class="btn full" onclick="doErrSearch()">搜索</button>
+    <button class="btn outline full" onclick="closeModal('errSearchM')" style="margin-top:6px">关闭</button>
+    <div id="errSearchRes" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- 页面：家长中心 -->
+<div class="page" id="p-parent">
+  <div class="card">
+    <div class="card-title">家长中心</div>
+    <div class="card-sub">这里是给家长看的宇宙仪表盘。</div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card">
+        <div class="section-title">学习时长</div>
+        <div id="pTime" style="font-size:22px;font-weight:600">0 分钟</div>
+      </div>
+      <div class="card">
+        <div class="section-title">总题数</div>
+        <div id="pCnt" style="font-size:22px;font-weight:600">0 题</div>
+      </div>
+      <div class="card">
+        <div class="section-title">正确率</div>
+        <div id="pAcc" style="font-size:22px;font-weight:600">0%</div>
+      </div>
+      <div class="card">
+        <div class="section-title">奥数进度</div>
+        <div id="pAdv" style="font-size:22px;font-weight:600">0%</div>
+      </div>
+      
+      <div class="card" style="margin-top:12px">
+        <div class="section-title">做题数量趋势</div>
+        <!-- <svg id="chartCnt" width="100%" height="120"></svg> -->
+        <svg id="chartCnt" style="width:100%;height:120px"></svg>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="section-title">正确率趋势</div>
+        <!-- <svg id="chartRate" width="100%" height="120"></svg> -->
+        <svg id="chartRate" style="width:100%;height:120px"></svg>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="section-title">学习时间趋势</div>
+        <!-- <svg id="chartTime" width="100%" height="120"></svg> -->
+        <svg id="chartTime" style="width:100%;height:120px"></svg>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 页面：知识图谱 -->
+<div class="page" id="p-kg">
+  <div class="card">
+    <div class="card-title">知识图谱</div>
+    <div class="card-sub">这是你的数学宇宙星图，每个节点都是一个知识点。</div>
+    <svg id="kgSvg"></svg>
+  </div>
+</div>
+
+<!-- 页面：头像 & 年级选择 -->
+<div class="page" id="p-profile">
+  <div class="card">
+    <div class="card-title">个人档案</div>
+    <div class="card-sub">选择你的头像和年级，让数学宇宙更像你。</div>
+    <div style="margin-top:10px">
+      <div class="section-title">选择头像</div>
+      <div id="avList"></div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="section-title">选择年级</div>
+      <select id="gradeSel" onchange="changeGrade(this.value)">
+        <option value="一年级">一年级</option>
+        <option value="二年级">二年级</option>
+        <option value="三年级">三年级</option>
+        <option value="四年级">四年级</option>
+        <option value="五年级">五年级</option>
+        <option value="六年级">六年级</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- 底部导航 -->
+<div class="nav">
+  <div class="ntab on" data-p="p-home" onclick="go('p-home')">
+    <span>🏠</span><span>主页</span>
+  </div>
+  <div class="ntab" data-p="p-games" onclick="go('p-games')">
+    <span>🎮</span><span>游戏</span>
+  </div>
+  <div class="ntab" data-p="p-ai" onclick="go('p-ai')">
+    <span>🤖</span><span>天师</span>
+  </div>
+  <div class="ntab" data-p="p-errs" onclick="go('p-errs')">
+    <span>📚</span><span>错题</span>
+  </div>
+  <div class="ntab" data-p="p-sch" onclick="go('p-sch')">
+    <span>📅</span><span>计划</span>
+  </div>
+  <div class="ntab" data-p="p-parent" onclick="go('p-parent')">
+    <span>👨‍👩‍👧</span><span>家长</span>
+  </div>
+</div>
+
+<!-- 弹窗：错题添加 -->
+<div id="errM" class="modal-mask">
+  <div class="modal">
+    <h3>添加错题</h3>
+    <input id="errQ" placeholder="题目">
+    <input id="errW" placeholder="你的答案">
+    <input id="errR" placeholder="正确答案">
+    <input id="errT" placeholder="类型，例如：分数">
+    <button class="btn full" onclick="saveErr()">保存</button>
+    <button class="btn outline full" onclick="closeModal('errM')" style="margin-top:6px">取消</button>
+  </div>
+</div>
+
+<!-- 弹窗：计划添加 -->
+<div id="schM" class="modal-mask">
+  <div class="modal">
+    <h3>添加学习计划</h3>
+    <input id="schD" placeholder="周几，例如：周一">
+    <input id="schT" placeholder="时间，例如：19:30">
+    <input id="schDr" placeholder="时长（分钟），例如：30">
+    <input id="schC" placeholder="内容，例如：奥数练习">
+    <button class="btn full" onclick="saveSch()">保存</button>
+    <button class="btn outline full" onclick="closeModal('schM')" style="margin-top:6px">取消</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+</div>
+
+<script>
+// 简单选择器
+function $(id){return document.getElementById(id);}
+
+// 全局数据（简单版）
+const S = {
+  time:0,      // 学习时长（分钟）
+  cnt:0,       // 做题数量
+  right:0,     // 正确题数
+  adv:0,       // 奥数进度（0-100）
+  errs:[],     // 错题列表
+  sch:[],      // 计划列表
+  logs:[],     // 游戏记录
+  av:'🦊',
+  grade:'一年级',
+  lv:1,
+  xp:0
+};
+
+// 页面切换
+function go(pid){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  $(pid).classList.add('on');
+  
+  // ⭐ 页面显示后再绘图（SVG 尺寸已准备好）
+  // ⭐ 在这里顺便刷新家长中心图表
+  //setTimeout(drawParentCharts, 50);
+  // ⭐ 关键：让布局完全渲染后再画图
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(drawParentCharts);
+    });
+  });
+  
+  document.querySelectorAll('.ntab').forEach(t=>{
+    t.classList.toggle('on', t.dataset.p === pid);
+  });
+}
+
+// Toast
+function toast(t,type='s'){
+  const div = document.createElement('div');
+  div.className = 't '+type;
+  div.textContent = t;
+  $('toast').appendChild(div);
+  setTimeout(()=>div.remove(),2000);
+}
+
+// Modal
+function openModal(id){$(id).classList.add('on');}
+function closeModal(id){$(id).classList.remove('on');}
+
+// 随机数
+function rd(min,max){
+  return Math.floor(Math.random()*(max-min+1))+min;
+}
+
+// 初始化头像列表
+const AVS = ['🦊','🐱','🐶','🐼','🐯','🐧','🐰','🐨'];
+function drawAvs(){
+  const box = $('avList');
+  box.innerHTML = AVS.map(a =>
+    `<button class="btn outline" style="margin:4px" onclick="changeAv('${a}')">${a}</button>`
+  ).join('');
+}
+function changeAv(a){
+  S.av = a;
+  $('hAv').textContent = a;
+  toast('头像已更新','s');
+}
+
+// 年级
+function changeGrade(g){
+  S.grade = g;
+  $('hGrade').textContent = g+' · 数学宇宙';
+  toast('年级已更新为 '+g,'s');
+}
+
+// AI 天师
+let aiMsgs = [];
+const AI_CHIPS = [
+  '帮我讲分数',
+  '这道应用题不会',
+  '乘法口诀怎么记',
+  '几何面积怎么算'
+];
+
+function drawAIChips(){
+  $('aiChips').innerHTML = AI_CHIPS.map(x =>
+    `<span class="chip" onclick="sendAI('${x}')"><span>✨</span><span>${x}</span></span>`
+  ).join('');
+}
+drawAIChips();
+
+function renderAI(){
+  $('chatArea').innerHTML = aiMsgs.map(m=>{
+    const cls = m.me ? 'msg me' : 'msg ai';
+    return `<div class="${cls}">${m.t}</div>`;
+  }).join('');
+  $('chatArea').scrollTop = $('chatArea').scrollHeight;
+}
+
+function sendAI(t){
+  const inp = $('aiInp');
+  const msg = t || inp.value.trim();
+  if(!msg){
+    toast('先输入一个问题吧','e');
+    return;
+  }
+  aiMsgs.push({me:true,t:msg});
+  inp.value = '';
+  renderAI();
+  setTimeout(()=>aiReply(msg),400);
+}
+
+function aiReply(q){
+  let r = '';
+  if(q.includes('分数')){
+    r = '分数就是“几份中的几份”，例如 3/4 表示把整体分成 4 份，取其中 3 份。你可以试着画图来理解。';
+  }else if(q.includes('应用题')){
+    r = '应用题可以按四步来做：①读题；②找条件；③定问题；④列式。你可以把题目发给我，我们一起拆解。';
+  }else if(q.includes('乘法')){
+    r = '乘法口诀可以按行来记，比如：二三得六、二四得八……你可以每天记一行，然后用小游戏来练习。';
+  }else if(q.includes('面积')){
+    r = '常见图形面积：长方形是 长×宽，正方形是 边长×边长，三角形是 底×高÷2。你可以先从这些开始。';
+  }else{
+    r = '我在这儿，你可以随便问数学相关的问题，或者把不会的题目发给我，我们一步一步来。';
+  }
+  aiMsgs.push({me:false,t:r});
+  renderAI();
+}
+
+// 错题本
+function drawErrs(){
+  const box = $('errList');
+  if(!S.errs.length){
+    box.innerHTML = '<div class="section-sub">还没有错题，等你在游戏或练习里遇到第一道错题。</div>';
+    return;
+  }
+  box.innerHTML = S.errs.map((e,i)=>
+    `<div class="list-item">
+      <div class="list-item-title">${e.q}</div>
+      <div class="list-item-sub">你的答案：${e.w} · 正确答案：${e.r} · 类型：${e.t}</div>
+      <button class="btn outline" style="margin-top:6px" onclick="delErr(${i})">删除</button>
+    </div>`
+  ).join('');
+}
+function saveErr(){
+  const q = $('errQ').value.trim();
+  const w = $('errW').value.trim();
+  const r = $('errR').value.trim();
+  const t = $('errT').value.trim() || '未分类';
+  if(!q || !w || !r){
+    toast('题目、你的答案、正确答案都要填','e');
+    return;
+  }
+  S.errs.push({q,w,r,t});
+  $('errQ').value = '';
+  $('errW').value = '';
+  $('errR').value = '';
+  $('errT').value = '';
+  closeModal('errM');
+  drawErrs();
+  saveData();
+  toast('错题已保存','s');
+}
+function delErr(i){
+  S.errs.splice(i,1);
+  drawErrs();
+  saveData();
+  toast('已删除一条错题','s');
+}
+
+// 学习计划
+function drawSch(){
+  const box = $('schList');
+  if(!S.sch.length){
+    box.innerHTML = '<div class="section-sub">还没有计划，可以先添加一个简单的“每天 20 分钟练习”。</div>';
+    return;
+  }
+  box.innerHTML = S.sch.map((s,i)=>
+    `<div class="list-item">
+      <div class="list-item-title">${s.d} · ${s.t} · ${s.dr} 分钟</div>
+      <div class="list-item-sub">${s.c}</div>
+      <button class="btn outline" style="margin-top:6px" onclick="delSch(${i})">删除</button>
+    </div>`
+  ).join('');
+}
+function saveSch(){
+  const d = $('schD').value.trim();
+  const t = $('schT').value.trim();
+  const dr = $('schDr').value.trim();
+  const c = $('schC').value.trim();
+  if(!d || !t || !dr || !c){
+    toast('周几、时间、时长、内容都要填','e');
+    return;
+  }
+  S.sch.push({d,t,dr,c});
+  $('schD').value = '';
+  $('schT').value = '';
+  $('schDr').value = '';
+  $('schC').value = '';
+  closeModal('schM');
+  drawSch();
+  saveData();
+  toast('计划已保存','s');
+}
+function delSch(i){
+  S.sch.splice(i,1);
+  drawSch();
+  saveData();
+  toast('已删除一条计划','s');
+}
+
+// 游戏中心（骨架版）
+function drawGameLogs(){
+  const box = $('gameLogs');
+  if(!S.logs.length){
+    box.innerHTML = '<div class="section-sub">还没有游戏记录，先去玩一局吧。</div>';
+    return;
+  }
+  box.innerHTML = S.logs.map(l=>
+    `<div class="list-item">
+      <div class="list-item-title">${l.name} · ${l.res}</div>
+      <div class="list-item-sub">${l.time} · 题数：${l.cnt} · 正确：${l.right}</div>
+    </div>`
+  ).join('');
+}
+
+// 游戏中心（披萨大作战完整版 + 其他游戏骨架）
+let pizzaState = null; // 当前披萨游戏状态
+
+function startGame(type){
+  if(type === 'pizza'){
+    startPizzaGame();
+    return;
+  }
+  if(type === 'space'){
+    startSpaceGame();
+    return;
+  }
+  if(type === 'detective'){
+    startDetectGame();
+    return;
+  }
+  if(type === 'geo'){
+    startGeoGame();
+    return;
+  }
+  
+  // 其他游戏暂时还是模拟一局，后面可以按披萨的模式扩展
+  let name = '';
+  const cnt = rd(5,12);
+  const right = rd(Math.floor(cnt/2),cnt);
+  const time = rd(5,20);
+  
+  S.cnt += cnt;
+  S.right += right;
+  S.time += time;
+  S.adv = Math.min(100,S.adv + rd(1,5));
+  
+  S.logs.push({
+    name,
+    res:right/cnt>0.7?'表现不错':'下次可以更好',
+    time:`${time} 分钟`,
+    cnt,
+    right
+  });
+  
+  updateStats();
+  drawGameLogs();
+  saveData();
+  toast(`已模拟一局「${name}」`);
+}
+
+// 披萨大作战：真正分数游戏
+function startPizzaGame(){
+  // 初始化一局
+  pizzaState = {
+    total: 5,      // 本局题目数量
+    idx: 0,         // 当前题目索引
+    right: 0,       // 正确数
+    wrongs: []      // 错题列表（用于自动加入错题本）
+  };
+  openModal('pizzaM');
+  nextPizzaQ();
+}
+
+function nextPizzaQ(){
+  if(!pizzaState) return;
+  if(pizzaState.idx >= pizzaState.total){
+    endPizzaGame();
+    return;
+  }
+  // 随机生成题目：披萨总份数 & 小动物数量
+  const slices = rd(4,12);   // 披萨被切成几份
+  const animals = rd(2,6);   // 小动物数量
+  // 每只分到的份数（可能不是整数）
+  const per = slices / animals;
+  // 把 per 转成分数形式（最简分数）
+  const frac = toFrac(per);
+
+  pizzaState.cur = {
+    slices,
+    animals,
+    frac // {a,b} 表示 a/b
+  };
+
+  $('pizzaQ').textContent =
+    `披萨被切成 ${slices} 份，要分给 ${animals} 只小动物，` +
+    `每只分到多少份？(用分数表示)`;
+    
+  $('pizzaTip').textContent = `提示：例如 ${frac.a}/${frac.b}`;
+  $('pizzaAns').value = '';
+}
+
+function submitPizza(){
+  const inp = $('pizzaAns').value.trim();
+  if(!inp){
+    toast('先输入一个分数答案，例如：3/4','e');
+    return;
+  }
+  // 解析输入分数
+  const parts = inp.split('/');
+  if(parts.length !== 2){
+    toast('格式错误，请用 a/b','e');
+    return;
+  }
+  const a = parseInt(parts[0],10);
+  const b = parseInt(parts[1],10);
+  if(!a || !b){
+    toast('分子分母必须是整数','e');
+    return;
+  }
+
+  const { frac, slices, animals } = pizzaState.cur;
+  const isRight = (a === frac.a && b === frac.b);
+
+  if(isRight){
+    pizzaState.right++;
+    S.xp += 5; // 每道题给一点经验
+    toast(`答对了！每只分到 ${frac.a}/${frac.b}`,'s');
+  }else{
+    toast(`错了，正确答案是 ${frac.a}/${frac.b}`,'e');
+    pizzaState.wrongs.push({
+      q:`披萨 ${slices} 份，${animals} 只动物，每只分到多少？`,
+      w:inp,
+      r:`${frac.a}/${frac.b}`,
+      t:'分数 · 披萨大作战'
+    });
+  }
+
+  pizzaState.idx++;
+  nextPizzaQ();
+}
+
+function endPizzaGame(){
+  closeModal('pizzaM');
+
+  const cnt = pizzaState.total;
+  const right = pizzaState.right;
+  const time = rd(5,10); // 简单估一个时间
+  S.cnt += cnt;
+  S.right += right;
+  S.time += time;
+  S.adv = Math.min(100,S.adv + rd(2,6));
+
+  // 把错题自动加入错题本
+  pizzaState.wrongs.forEach(e=>S.errs.push(e));
+
+  // 记录游戏日志
+  S.logs.push({
+    name:'披萨大作战',
+    res:right/cnt>0.7?'分数掌握不错！':'下次可以更仔细一点。',
+    time:`${time} 分钟`,
+    cnt,
+    right
+  });
+
+  updateStats();
+  drawGameLogs();
+  drawErrs();
+  saveData();
+
+  toast(`本局结束：${cnt} 题，答对 ${right} 题，错题已自动加入错题本。`,'s');
+  pizzaState = null;
+}
+
+// 关闭披萨弹窗（中途结束）
+function closePizza(){
+  closeModal('pizzaM');
+  pizzaState = null;
+  toast('已结束本局披萨大作战','e');
+}
+
+// 把小数转成最简分数 a/b
+function toFrac(x){
+  // 简单处理：限制分母最大 12，找一个近似分数
+  let bestA = 1, bestB = 1, bestDiff = 1e9;
+  for(let b=1;b<=12;b++){
+    const a = Math.round(x*b);
+    const diff = Math.abs(x - a/b);
+    if(diff < bestDiff){
+      bestDiff = diff;
+      bestA = a;
+      bestB = b;
+    }
+  }
+  // 约分
+  const g = gcd(bestA,bestB);
+  return {a:bestA/g,b:bestB/g};
+}
+function gcd(a,b){
+  a = Math.abs(a); b = Math.abs(b);
+  while(b){const t=a%b;a=b;b=t;}
+  return a || 1;
+}
+
+// 太空乘法：完整逻辑
+let spaceState = null;
+
+function startSpaceGame(){
+  spaceState = {
+    total: 8,      // 本局题数
+    idx: 0,
+    right: 0,
+    wrongs: []
+  };
+  openModal('spaceM');
+  nextSpaceQ();
+}
+
+function nextSpaceQ(){
+  if(spaceState.idx >= spaceState.total){
+    endSpaceGame();
+    return;
+  }
+
+  // 难度随题号提升
+  const lv = spaceState.idx < 3 ? 1 : (spaceState.idx < 6 ? 2 : 3);
+
+  let a, b;
+  if(lv === 1){
+    a = rd(2,9);
+    b = rd(2,9);
+  }else if(lv === 2){
+    a = rd(10,19);
+    b = rd(2,9);
+  }else{
+    a = rd(10,19);
+    b = rd(10,19);
+  }
+
+  const ans = a * b;
+
+  spaceState.cur = { a, b, ans };
+
+  $('spaceQ').textContent = `宇宙飞船遇到能量锁，需要计算：${a} × ${b} = ?`;
+  $('spaceAns').value = '';
+}
+
+function submitSpace(){
+  const inp = $('spaceAns').value.trim();
+  if(!inp){
+    toast('请输入答案','e');
+    return;
+  }
+
+  const userAns = parseInt(inp,10);
+  const { a, b, ans } = spaceState.cur;
+
+  if(userAns === ans){
+    spaceState.right++;
+    S.xp += 4; // 乘法题给 XP
+    toast(`正确！${a} × ${b} = ${ans}`,'s');
+  }else{
+    toast(`错了，正确答案是 ${ans}`,'e');
+    spaceState.wrongs.push({
+      q:`计算 ${a} × ${b}`,
+      w:inp,
+      r:`${ans}`,
+      t:'乘法 · 太空乘法'
+    });
+  }
+
+  spaceState.idx++;
+  nextSpaceQ();
+}
+
+function endSpaceGame(){
+  closeModal('spaceM');
+
+  const cnt = spaceState.total;
+  const right = spaceState.right;
+  const time = rd(6,12);
+
+  S.cnt += cnt;
+  S.right += right;
+  S.time += time;
+  S.adv = Math.min(100, S.adv + rd(3,7));
+
+  spaceState.wrongs.forEach(e => S.errs.push(e));
+
+  S.logs.push({
+    name:'太空乘法',
+    res:right/cnt>0.7?'乘法掌握不错！':'下次可以更仔细一点。',
+    time:`${time} 分钟`,
+    cnt,
+    right
+  });
+
+  updateStats();
+  drawGameLogs();
+  drawErrs();
+  saveData();
+
+  toast(`太空乘法结束：${cnt} 题，答对 ${right} 题，错题已加入错题本`,'s');
+  spaceState = null;
+}
+
+function closeSpace(){
+  closeModal('spaceM');
+  spaceState = null;
+  toast('已结束太空乘法','e');
+}
+
+// 数字侦探：完整逻辑
+let detectState = null;
+
+function startDetectGame(){
+  detectState = {
+    total: 6,      // 本局题数
+    idx: 0,
+    right: 0,
+    wrongs: []
+  };
+  openModal('detectM');
+  nextDetectQ();
+}
+
+function nextDetectQ(){
+  if(detectState.idx >= detectState.total){
+    endDetectGame();
+    return;
+  }
+
+  // 难度随题号提升
+  const lv = detectState.idx < 2 ? 1 : (detectState.idx < 4 ? 2 : 3);
+
+  let seq = [];
+  let wrongNum = 0;
+
+  if(lv === 1){
+    // 简单规律：+2
+    const start = rd(2,10);
+    for(let i=0;i<5;i++) seq.push(start + i*2);
+    wrongNum = seq[rd(1,3)] + rd(1,3); // 随机改一个数字
+  }else if(lv === 2){
+    // 中等规律：×2
+    const start = rd(2,5);
+    for(let i=0;i<5;i++) seq.push(start * Math.pow(2,i));
+    wrongNum = seq[rd(1,3)] + rd(2,6);
+  }else{
+    // 高级规律：斐波那契
+    let a = rd(1,4), b = rd(2,6);
+    seq = [a,b];
+    for(let i=2;i<5;i++) seq.push(seq[i-1] + seq[i-2]);
+    wrongNum = seq[rd(1,3)] + rd(3,8);
+  }
+
+  // 把错误数字塞进去
+  const wrongIndex = rd(1,3);
+  seq[wrongIndex] = wrongNum;
+
+  detectState.cur = {
+    seq,
+    wrong: wrongNum
+  };
+
+  $('detectQ').textContent =
+    `找出下面数列中不符合规律的数字：` +
+    `【 ${seq.join('，')} 】`;
+
+  $('detectAns').value = '';
+}
+
+function submitDetect(){
+  const inp = $('detectAns').value.trim();
+  if(!inp){
+    toast('请输入可疑数字','e');
+    return;
+  }
+
+  const userAns = parseInt(inp,10);
+  const { seq, wrong } = detectState.cur;
+
+  if(userAns === wrong){
+    detectState.right++;
+    S.xp += 4;
+    toast(`正确！可疑数字是 ${wrong}`,'s');
+  }else{
+    toast(`错了，可疑数字是 ${wrong}`,'e');
+    detectState.wrongs.push({
+      q:`找出可疑数字：${seq.join('，')}`,
+      w:inp,
+      r:`${wrong}`,
+      t:'逻辑 · 数字侦探'
+    });
+  }
+
+  detectState.idx++;
+  nextDetectQ();
+}
+
+function endDetectGame(){
+  closeModal('detectM');
+
+  const cnt = detectState.total;
+  const right = detectState.right;
+  const time = rd(5,10);
+
+  S.cnt += cnt;
+  S.right += right;
+  S.time += time;
+  S.adv = Math.min(100, S.adv + rd(2,6));
+
+  detectState.wrongs.forEach(e => S.errs.push(e));
+
+  S.logs.push({
+    name:'数字侦探',
+    res:right/cnt>0.7?'逻辑不错！':'下次可以更仔细一点。',
+    time:`${time} 分钟`,
+    cnt,
+    right
+  });
+
+  updateStats();
+  drawGameLogs();
+  drawErrs();
+  saveData();
+
+  toast(`数字侦探结束：${cnt} 题，答对 ${right} 题，错题已加入错题本`,'s');
+  detectState = null;
+}
+
+function closeDetect(){
+  closeModal('detectM');
+  detectState = null;
+  toast('已结束数字侦探','e');
+}
+
+// 几何大师：完整逻辑
+let geoState = null;
+
+function startGeoGame(){
+  geoState = {
+    total: 6,      // 本局题数
+    idx: 0,
+    right: 0,
+    wrongs: []
+  };
+  openModal('geoM');
+  nextGeoQ();
+}
+
+function nextGeoQ(){
+  if(geoState.idx >= geoState.total){
+    endGeoGame();
+    return;
+  }
+
+  // 难度随题号提升
+  const lv = geoState.idx < 2 ? 1 : (geoState.idx < 4 ? 2 : 3);
+
+  let shape = '';
+  let params = {};
+  let ans = 0;
+
+  if(lv === 1){
+    // 简单：长方形面积
+    const w = rd(2,10);
+    const h = rd(2,10);
+    shape = '长方形';
+    params = { w, h };
+    ans = w * h;
+  }else if(lv === 2){
+    // 中等：三角形面积
+    const b = rd(4,12);
+    const h = rd(4,12);
+    shape = '三角形';
+    params = { b, h };
+    ans = b * h / 2;
+  }else{
+    // 高级：圆面积（取整）
+    const r = rd(2,10);
+    shape = '圆';
+    params = { r };
+    ans = Math.round(Math.PI * r * r);
+  }
+
+  geoState.cur = { shape, params, ans };
+
+  if(shape === '长方形'){
+    $('geoQ').textContent = `一个长方形，宽 ${params.w}，高 ${params.h}，面积是多少？`;
+  }else if(shape === '三角形'){
+    $('geoQ').textContent = `一个三角形，底 ${params.b}，高 ${params.h}，面积是多少？`;
+  }else{
+    $('geoQ').textContent = `一个圆，半径 ${params.r}，面积是多少？（取整）`;
+  }
+
+  $('geoAns').value = '';
+}
+
+function submitGeo(){
+  const inp = $('geoAns').value.trim();
+  if(!inp){
+    toast('请输入面积','e');
+    return;
+  }
+
+  const userAns = parseFloat(inp);
+  const { shape, params, ans } = geoState.cur;
+
+  if(Math.abs(userAns - ans) < 0.0001){
+    geoState.right++;
+    S.xp += 4;
+    toast(`正确！面积是 ${ans}`,'s');
+  }else{
+    toast(`错了，正确答案是 ${ans}`,'e');
+    geoState.wrongs.push({
+      q:`求面积：${shape} 参数 ${JSON.stringify(params)}`,
+      w:inp,
+      r:`${ans}`,
+      t:'几何 · 几何大师'
+    });
+  }
+
+  geoState.idx++;
+  nextGeoQ();
+}
+
+function endGeoGame(){
+  closeModal('geoM');
+
+  const cnt = geoState.total;
+  const right = geoState.right;
+  const time = rd(5,10);
+
+  S.cnt += cnt;
+  S.right += right;
+  S.time += time;
+  S.adv = Math.min(100, S.adv + rd(2,6));
+
+  geoState.wrongs.forEach(e => S.errs.push(e));
+
+  S.logs.push({
+    name:'几何大师',
+    res:right/cnt>0.7?'几何掌握不错！':'下次可以更仔细一点。',
+    time:`${time} 分钟`,
+    cnt,
+    right
+  });
+
+  updateStats();
+  drawGameLogs();
+  drawErrs();
+  saveData();
+
+  toast(`几何大师结束：${cnt} 题，答对 ${right} 题，错题已加入错题本`,'s');
+  geoState = null;
+}
+
+function closeGeo(){
+  closeModal('geoM');
+  geoState = null;
+  toast('已结束几何大师','e');
+}
+
+// 错题本增强版
+
+// 自动生成解析
+function genErrExplain(e){
+  if(e.t.includes('分数')){
+    return `分数题通常要先看整体被分成几份，再看取了几份。这里正确答案是 ${e.r}，你写的是 ${e.w}。`;
+  }
+  if(e.t.includes('乘法')){
+    return `乘法题可以用口诀或拆分法来算。例如：a×b 可以拆成 (a×10)+(a×b%10)。正确答案是 ${e.r}。`;
+  }
+  if(e.t.includes('逻辑')){
+    return `逻辑题要找规律，例如加法规律、乘法规律或递推规律。可疑数字是 ${e.r}。`;
+  }
+  if(e.t.includes('几何')){
+    return `几何题要记住面积公式：长方形=长×宽，三角形=底×高÷2，圆=πr²。正确答案是 ${e.r}。`;
+  }
+  return `正确答案是 ${e.r}，你写的是 ${e.w}。`;
+}
+
+// 查看错题解析
+function viewErr(i){
+  const e = S.errs[i];
+  $('errViewQ').textContent = e.q;
+  $('errViewA').textContent = genErrExplain(e);
+  openModal('errViewM');
+}
+
+// 错题复习模式
+let errRevState = null;
+
+function startErrRev(){
+  if(!S.errs.length){
+    toast('还没有错题可以复习','e');
+    return;
+  }
+  errRevState = {
+    pool: [...S.errs],
+    cur: null
+  };
+  openModal('errRevM');
+  nextErrRev();
+}
+
+function nextErrRev(){
+  if(!errRevState.pool.length){
+    toast('所有错题都复习完了！','s');
+    closeErrRev();
+    return;
+  }
+  const idx = rd(0, errRevState.pool.length - 1);
+  errRevState.cur = errRevState.pool[idx];
+  $('errRevQ').textContent = errRevState.cur.q;
+  $('errRevAns').value = '';
+}
+
+function submitErrRev(){
+  const inp = $('errRevAns').value.trim();
+  if(!inp){
+    toast('请输入你的答案','e');
+    return;
+  }
+  const cur = errRevState.cur;
+  if(inp === cur.r){
+    toast('答对了！继续下一题','s');
+    // 从复习池移除
+    errRevState.pool = errRevState.pool.filter(e => e !== cur);
+  }else{
+    toast(`错了，正确答案是 ${cur.r}`,'e');
+  }
+  nextErrRev();
+}
+
+function closeErrRev(){
+  closeModal('errRevM');
+  errRevState = null;
+}
+
+// 错题搜索
+function doErrSearch(){
+  const key = $('errSearchInp').value.trim();
+  if(!key){
+    toast('请输入关键词','e');
+    return;
+  }
+  const res = S.errs.filter(e =>
+    e.q.includes(key) ||
+    e.t.includes(key) ||
+    e.w.includes(key) ||
+    e.r.includes(key)
+  );
+  if(!res.length){
+    $('errSearchRes').innerHTML = '<div class="section-sub">没有找到相关错题</div>';
+    return;
+  }
+  $('errSearchRes').innerHTML = res.map(e =>
+    `<div class="list-item">
+      <div class="list-item-title">${e.q}</div>
+      <div class="list-item-sub">你的答案：${e.w} · 正确：${e.r} · 类型：${e.t}</div>
+    </div>`
+  ).join('');
+}
+
+
+
+
+// 主页任务
+function drawHomeTasks(){
+  const box = $('homeTasks');
+  const tasks = [
+    {t:'玩一局披萨大作战',p:'p-games'},
+    {t:'添加一条错题',p:'p-errs'},
+    {t:'添加一个学习计划',p:'p-sch'},
+    {t:'问 AI 天师一个问题',p:'p-ai'}
+  ];
+  box.innerHTML = tasks.map(x=>
+    `<div class="list-item">
+      <div class="list-item-title">${x.t}</div>
+      <button class="btn outline" style="margin-top:6px" onclick="go('${x.p}')">去完成</button>
+    </div>`
+  ).join('');
+}
+
+//document.addEventListener('DOMContentLoaded', () => {
+    //drawParentCharts()
+//});
+
+// 家长中心 & 主页统计
+function updateStats(){
+  $('sTime').textContent = S.time+' 分钟';
+  $('sCnt').textContent = S.cnt+' 题';
+  const acc = S.cnt ? Math.round(S.right/S.cnt*100) : 0;
+  $('sAcc').textContent = acc+'%';
+  $('sAdv').textContent = S.adv+'%';
+
+  $('pTime').textContent = S.time+' 分钟';
+  $('pCnt').textContent = S.cnt+' 题';
+  $('pAcc').textContent = acc+'%';
+  $('pAdv').textContent = S.adv+'%';
+
+  S.lv = 1 + Math.floor(S.xp/100);
+  $('hLv').textContent = 'Lv'+S.lv;
+  $('hXp').textContent = S.xp+' XP';
+  
+}
+
+
+  // ⭐ 在这里顺便刷新家长中心图表
+  //setTimeout(drawParentCharts, 50);
+  //requestAnimationFrame(() => {
+    //requestAnimationFrame(() => {
+      //requestAnimationFrame(drawParentCharts);
+    //});
+  //});
+
+
+// ⭐ 原始 drawParent
+// 家长中心基础渲染（必须有）
+function drawParent(){
+  $('pTime').textContent = S.time + ' 分钟';
+  $('pCnt').textContent = S.cnt + ' 题';
+  $('pAcc').textContent = Math.round((S.right / S.cnt) * 100 || 0) + '%';
+  $('pAdv').textContent = S.adv + '%';
+}
+
+// ⭐ 覆盖原 drawParent，使图表自动更新（加入延迟）
+//const oldDrawParent = drawParent;
+//drawParent = function(){
+  //oldDrawParent();
+  ////drawParentCharts();
+  //setTimeout(drawParentCharts, 50); // ⭐ 修复 SVG 宽度为 0 的问题
+//};
+
+// ⭐ 在页面切换函数里加入这一行（必须有）
+//if(id === 'p-parent') drawParent();
+
+// 家长中心图表增强版：折线图 + 柱状图 + 时间趋势
+function drawParentCharts(){
+  const logs = S.logs;
+  if(!logs.length){
+    $('chartCnt').innerHTML = '<text x="10" y="60">暂无数据</text>';
+    $('chartRate').innerHTML = '<text x="10" y="60">暂无数据</text>';
+    $('chartTime').innerHTML = '<text x="10" y="60">暂无数据</text>';
+    return;
+  }
+
+  // 提取数据
+  const cnts = logs.map(l => l.cnt);
+  const rates = logs.map(l => Math.round((l.right / l.cnt) * 100));
+  const times = logs.map(l => parseInt(l.time));
+
+  //drawLineChart('chartCnt', cnts, '#4fc3f7');
+  //drawBarChart('chartRate', rates, '#81c784');
+  //drawLineChart('chartTime', times, '#ffb74d');
+  // ⭐ 改颜色（关键）
+  drawLineChart('chartCnt', cnts, '#00eaff');   // 亮蓝
+  drawBarChart('chartRate', rates, '#00ff88');  // 亮绿
+  drawLineChart('chartTime', times, '#ffcc00'); // 亮黄
+}
+
+// 折线图
+function drawLineChart(id, data, color){
+  const svg = $(id);
+  const w = svg.clientWidth;
+  const h = svg.clientHeight;
+
+  const max = Math.max(...data) || 1;  // ⭐ 防止 max 为 0
+  const stepX = data.length > 1 ? w / (data.length - 1) : 0;
+  const scaleY = h / max;
+
+  let path = '';
+  data.forEach((v,i)=>{
+    const x = i * stepX;
+    const y = h - v * scaleY;
+    path += (i===0 ? `M${x},${y}` : ` L${x},${y}`);
+  })
+  
+  //svg.innerHTML = `<path d="${path}" stroke="${color}" stroke-width="3" fill="none"/>`;
+  svg.innerHTML = `
+    <path d="${path}"
+      stroke="${color}"
+      stroke-width="8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+      filter="drop-shadow(0px 0px 6px ${color})"
+    />
+  `;
+}
+
+// 柱状图
+function drawBarChart(id, data, color){
+  const svg = $(id);
+  const w = svg.clientWidth;
+  const h = svg.clientHeight;
+
+  const max = 100;
+  const barW = w / data.length * 0.6;
+  const gap = w / data.length * 0.4;
+
+  let html = '';
+  data.forEach((v,i)=>{
+    const x = i * (barW + gap);
+    const barH = (v / max) * h;
+    const y = h - barH;
+    html += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="6" ry="6" />`;
+  });
+
+  svg.innerHTML = html;
+}
+
+// ⭐ 覆盖原 drawParent，使图表自动更新
+// ⭐ 图表增强版（必须放在原始 drawParent 后面）
+//const oldDrawParent = drawParent;
+//drawParent = function(){
+  //oldDrawParent();      // 原始家长中心渲染
+  //drawParentCharts();   // 图表增强渲染
+//};
+
+// 知识图谱（简单星图）
+function drawKG(){
+  const svg = $('kgSvg');
+  const w = svg.clientWidth || svg.offsetWidth || 320;
+  const h = svg.clientHeight || 220;
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  const topics = [
+    {name:'加减法',x:w*0.2,y:h*0.4},
+    {name:'乘除法',x:w*0.5,y:h*0.2},
+    {name:'分数',x:w*0.8,y:h*0.4},
+    {name:'几何',x:w*0.5,y:h*0.7}
+  ];
+  const links = [
+    [0,1],[1,2],[2,3],[0,3]
+  ];
+  svg.innerHTML = '';
+  links.forEach(([a,b])=>{
+    const la = topics[a], lb = topics[b];
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',la.x);
+    line.setAttribute('y1',la.y);
+    line.setAttribute('x2',lb.x);
+    line.setAttribute('y2',lb.y);
+    line.setAttribute('class','kg-link');
+    svg.appendChild(line);
+  });
+  topics.forEach(t=>{
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',t.x);
+    c.setAttribute('cy',t.y);
+    c.setAttribute('r',10);
+    c.setAttribute('class','kg-node');
+    const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('x',t.x+14);
+    tx.setAttribute('y',t.y+4);
+    tx.setAttribute('fill','#F9FAFB');
+    tx.setAttribute('font-size','12');
+    tx.textContent = t.name;
+    g.appendChild(c);
+    g.appendChild(tx);
+    svg.appendChild(g);
+  });
+}
+
+// 数据存储
+const KEY = 'math_universe_talent';
+function saveData(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(S));
+  }catch(e){}
+}
+function loadData(){
+  try{
+    const s = localStorage.getItem(KEY);
+    if(s){
+      const o = JSON.parse(s);
+      Object.assign(S,o);
+    }
+  }catch(e){}
+}
+
+// 初始化
+function init(){
+  loadData();
+  $('hAv').textContent = S.av;
+  $('hGrade').textContent = S.grade+' · 数学宇宙';
+  $('gradeSel').value = S.grade;
+  updateStats();
+  drawAvs();
+  drawErrs();
+  drawSch();
+  drawGameLogs();
+  drawHomeTasks();
+  drawKG();
+  // 初始 AI 欢迎语
+  aiMsgs.push({me:false,t:'欢迎来到数学宇宙，我是你的 AI 天师。不会的题目、想问的概念，都可以在这里问我。'});
+  renderAI();
+}
+init();
+// ⭐ 最终修复版：确保增强逻辑一定在原始 drawSch 之后执行
+
+function enhanceSch(){
+  // 星期映射
+  const WEEK = ['周一','周二','周三','周四','周五','周六','周日'];
+
+  // 周课表渲染
+  function drawSchCalendar(){
+    if(!S.sch.length){
+      $('schCalendar').innerHTML = '暂无计划';
+      return;
+    }
+
+    const map = {};
+    WEEK.forEach(w => map[w] = []);
+
+    S.sch.forEach(s => {
+      if(map[s.d]) map[s.d].push(s);
+    });
+
+    let html = '';
+    WEEK.forEach(w => {
+      html += `<div style="margin-top:6px;font-weight:600">${w}</div>`;
+      if(map[w].length === 0){
+        html += `<div class="section-sub">无计划</div>`;
+      }else{
+        map[w].forEach(s => {
+          html += `
+            <div class="list-item">
+              <div class="list-item-title">${s.t} · ${s.dr} 分钟</div>
+              <div class="list-item-sub">${s.c}</div>
+            </div>
+          `;
+        });
+      }
+    });
+
+    $('schCalendar').innerHTML = html;
+  }
+
+  // 倒计时
+  function calcSchCountdown(){
+    if(!S.sch.length){
+      $('schCountdown').textContent = '暂无计划';
+      return;
+    }
+
+    const now = new Date();
+    const nowWeek = now.getDay(); // 0=周日
+    const nowMin = now.getHours()*60 + now.getMinutes();
+
+    let bestDiff = Infinity;
+    let bestPlan = null;
+
+    S.sch.forEach(s => {
+      const targetWeek = WEEK.indexOf(s.d); // 0=周一
+      let diffDay = targetWeek - (nowWeek === 0 ? 6 : nowWeek - 1);
+      if(diffDay < 0) diffDay += 7;
+
+      const [hh,mm] = s.t.split(':').map(Number);
+      const targetMin = hh*60 + mm;
+
+      let diffMin = diffDay*24*60 + (targetMin - nowMin);
+      if(diffMin < 0) diffMin += 7*24*60;
+
+      if(diffMin < bestDiff){
+        bestDiff = diffMin;
+        bestPlan = s;
+      }
+    });
+
+    if(!bestPlan){
+      $('schCountdown').textContent = '暂无计划';
+      return;
+    }
+
+    const d = Math.floor(bestDiff / (24*60));
+    const h = Math.floor((bestDiff % (24*60)) / 60);
+    const m = bestDiff % 60;
+
+    $('schCountdown').textContent =
+      `${d} 天 ${h} 小时 ${m} 分钟 · ${bestPlan.d} ${bestPlan.t} · ${bestPlan.c}`;
+  }
+
+  // 学习提醒（每分钟检查）
+  function schReminderLoop(){
+    const now = new Date();
+    const WEEK = ['周一','周二','周三','周四','周五','周六','周日'];
+    const week = WEEK[now.getDay() === 0 ? 6 : now.getDay() - 1];
+    const hh = now.getHours();
+    const mm = now.getMinutes();
+
+    S.sch.forEach(s => {
+      if(s.d === week){
+        const [th,tm] = s.t.split(':').map(Number);
+        if(th === hh && tm === mm){
+          toast(`学习提醒：现在是 ${s.d} ${s.t}，该学习「${s.c}」啦！`,'s');
+        }
+      }
+    });
+  }
+  setInterval(schReminderLoop, 60000);
+
+  // ⭐ 关键：增强 drawSch（此时原始 drawSch 已经定义）
+  const old = drawSch;
+  drawSch = function(){
+    old();
+    drawSchCalendar();
+    calcSchCountdown();
+  };
+
+  // ⭐ 立即执行一次增强渲染
+  drawSch();
+}
+
+// ⭐ 在 init() 之后执行增强
+setTimeout(enhanceSch, 0);
+
+
+</script>
+</body>
+</html>
