@@ -49,6 +49,50 @@ window.GH = {
 </script>
 
 <style>
+.top-nav {
+  width: 100%;
+  background: #1F2937;
+  color: #fff;
+  padding: 10px 0;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.nav-inner {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.nav-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-links li a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.nav-links li a:hover {
+  opacity: 1;
+}
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #fff8e7; min-height: 100vh; }
   .home-header { background: linear-gradient(135deg, #c0392b, #8e24aa); color: white; padding: 40px 20px 30px; text-align: center; }
@@ -125,9 +169,35 @@ window.GH = {
   .chat-input-row { display: flex; gap: 8px; }
   .chat-input-row input { flex: 1; margin: 0; }
   .chat-input-row button { width: auto; padding: 10px 20px; }
+  
+  .cat-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 60px;
+    font-size: 40px; /* emoji 的大小 */
+  }
+  .cat-icon svg {
+    width: 70px;
+    height:70px;
+    display: block;
+    margin: 0 auto;
+  }
+
 </style>
 </head>
 <body>
+<nav class="top-nav">
+  <div class="nav-inner">
+    <span class="nav-title">🏮 华夏小课堂</span>
+    <ul class="nav-links">
+      <li><a href="index.html">首页</a></li>
+      <li><a href="content/reading/reading_index.html">📚 华夏小书房</a></li>
+      <li><a href="content/maths/maths_index.html">🧮 数学之窗</a></li>
+      <li><a href="content/idioms/idioms_index.html">📖 成语故事</a></li>
+    </ul>
+  </div>
+</nav>
 <!-- ✨ 不显示"加载中"，默认就显示完整首页 -->
 <div id="app">
   <div class="home-header">
@@ -136,6 +206,7 @@ window.GH = {
   </div>
 </div>
 <div id="tts-status" class="tts-status" style="display:none;">🔊 朗读中...</div>
+
 
 <script>
 // ================================================================
@@ -270,6 +341,13 @@ class PinyinLine {
   }
 }
 
+// ✔ 2. 跳转规则集中管理
+const categoryRoutes = {
+  games: (item) => `content/games/${item.id}.html`,
+  maths: (item) => item.url || `content/maths/${item.id}.html`,
+};
+
+
 // ================================================================
 // 主应用（重写版：绝对不会卡死）
 // ================================================================
@@ -360,28 +438,71 @@ class HuaXiaApp {
           <button class="qa-btn" onclick="app.togglePinyin()" id="pinyin-toggle">👁️ 隐藏拼音</button>
         </div>
         <div class="categories" id="categories"></div>
-        <footer style="text-align:center;padding:30px;color:#888;font-size:13px;">🌟 华夏小课堂 · <a href="admin/" style="color:#5e35b1;">教师后台</a></footer>
+        <footer style="text-align:center;padding:30px;color:#888;font-size:13px;">🌟 华夏小课堂 · <a href="admin/" style="color:#5e35b1;">后台管理</a></footer>
       `;
 
       const wb = document.getElementById('welcome-btn');
       if (wb) wb.onclick = () => { if (window.tts) window.tts.speak('你好小朋友，欢迎来到华夏小课堂！'); };
 
       // 渲染分类
+      const svgGames = `
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect x="2" y="2" width="28" height="28" rx="6" fill="white" opacity="0.25"/>
+              <text x="8" y="22" font-size="18" font-weight="bold" fill="white">文</text>
+              <text x="22" y="10" font-size="10" font-weight="bold" fill="white">a</text>
+              <text x="24" y="18" font-size="10" font-weight="bold" fill="white">o</text>
+              <text x="20" y="26" font-size="10" font-weight="bold" fill="white">e</text>
+            </svg>
+            `;
+      const svgMaths = `
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect x="2" y="2" width="28" height="28" rx="6" fill="white" opacity="0.25"/>
+              <rect x="16" y="6" width="10" height="10" rx="2" fill="white"/>
+              <rect x="6" y="16" width="10" height="10" rx="2" fill="white"/>
+              <rect x="16" y="16" width="6" height="6" rx="2" fill="white"/>
+              <rect x="18" y="18" width="6" height="6" rx="2" fill="white"/>
+              <text x="10" y="14" font-size="12" font-weight="bold" fill="#06B6D4">+</text>
+              <text x="20" y="14" font-size="12" font-weight="bold" fill="#06B6D4">−</text>
+              <text x="10" y="24" font-size="12" font-weight="bold" fill="#06B6D4">×</text>
+              <text x="20" y="24" font-size="12" font-weight="bold" fill="#06B6D4">÷</text>
+            </svg>
+            `;
       const cats = [
         { id: 'festivals', name: '传统节日', icon: '🎊', color: '#e74c3c' },
         { id: 'heroes', name: '历史人物', icon: '🦸', color: '#3498db' },
         { id: 'idioms', name: '成语故事', icon: '📖', color: '#16a085' },
-        { id: 'poems', name: '古诗欣赏', icon: '🖌️', color: '#9b59b6' },
+        { id: 'poems', name: '古诗欣赏', icon: '🖌️', color: '#EC4899' },
         { id: 'inventions', name: '四大发明', icon: '⚙️', color: '#f39c12' },
-        { id: 'food', name: '美食文化', icon: '🥟', color: '#e67e22' }
+        { id: 'food', name: '美食文化', icon: '🥟', color: '#e67e22' },
+        { id: 'games', name: '语文游戏', icon: svgGames, color: '#8B5CF6' },
+        { id: 'maths', name: '数学之窗', icon: svgMaths, color: '#06B6D4' },
       ];
+      // ③ ⭐⭐ 在这里放渲染分类的代码 ⭐⭐
+      /*
+      const categories = document.getElementById('categories');
+      categories.innerHTML = cats.map(cat => `
+        <div class="category-card" style="background:${cat.color};" onclick="app.openCategory('${cat.id}')">
+          <div class="cat-icon">${cat.icon}</div>
+          <div class="cat-name">${cat.name}</div>
+        </div>
+      `).join('');
+      */
+      // ③ 渲染分类卡片（同时支持 SVG / emoji + 点击）
       const cc = document.getElementById('categories');
       if (cc) {
+        cc.innerHTML = ''; // 先清空，避免重复
+        
         cats.forEach(c => {
           const card = document.createElement('div');
           card.className = 'category-card';
           card.style.background = c.color;
-          card.innerHTML = `<div class="icon">${c.icon}</div><h3>${c.name}</h3>`;
+          
+          //card.innerHTML = `<div class="icon">${c.icon}</div><h3>${c.name}</h3>`;
+          // 用 cat-icon + cat-name，统一结构，方便加样式
+          card.innerHTML = `
+            <div class="cat-icon">${c.icon}</div>
+            <div class="cat-name">${c.name}</div>
+          `;
           card.onclick = () => this.renderCategory(c);
           cc.appendChild(card);
         });
@@ -564,7 +685,7 @@ class HuaXiaApp {
     document.body.appendChild(ov);
     document.getElementById('st-close').onclick = () => ov.remove();
   }
-
+  
   async renderCategory(cat) {
     try {
       this.currentCategory = cat;
@@ -579,7 +700,28 @@ class HuaXiaApp {
         const card = document.createElement('div');
         card.className = 'article-item';
         card.innerHTML = `<div class="icon">${a.icon || '📄'}</div><div><h3>${a.title}</h3></div>`;
-        card.onclick = () => this.openArticle(cat.id, a.id);
+        //card.onclick = () => this.openArticle(cat.id, a.id);
+        // ⭐ 如果 JSON 有 url → 跳外部网址
+        if (a.url) {
+          card.onclick = () => {
+            window.location.href = a.url;
+          };
+        }
+        // ⭐ 如果是 games → 跳游戏 HTML
+        else if (cat.id === 'games') {
+        
+        // ⭐ 灵活跳转：如果该分类有特殊跳转规则
+        //if (categoryRoutes[cat.id]) {
+          card.onclick = () => {
+            //window.location.href = categoryRoutes[cat.id](a);
+            //⭐ 如果是 games → 跳游戏 HTML
+            window.location.href = `content/games/${a.id}.html`;
+          };
+        } else {
+          // ⭐ 默认跳文章
+          card.onclick = () => this.openArticle(cat.id, a.id);
+        }
+        
         list.appendChild(card);
       });
     } catch (e) { console.error('renderCategory:', e); }
@@ -590,7 +732,15 @@ class HuaXiaApp {
       const r = await fetch(`content/${cat}/index.json?_=${Date.now()}`);
       if (r.ok) return await r.json();
     } catch (e) {}
-    return { festivals: [{ id: 'duanwu', title: '端午节', icon: '🐉' }] }[cat] || [];
+    return { festivals: [{ id: 'duanwu', title: '端午节', icon: '🐉' }],
+             games: [{ id: 'pinyin-match', title: '拼音消消乐', icon: '🧩' },
+                     { id: 'tianzige-trace', title: '田字格描红', icon: '✏️' },
+                     { id: 'idiom-chain', title: '成语接龙', icon: '🔗' }],
+             maths: [{ id: 'math-practice_0000', title: '小学1年级算数练习', url: 'https://always001.github.io/github.io/math-practice_0000.html', icon: '🎓' },
+                     { id: 'shuxueleyuan', title: '数学乐园', url: 'https://maths3.github.io/', icon: '🎈 ' },
+                     { id: 'talent_0000', title: '天才基本法之入门级', url: 'https://maths3.github.io/talent_0000.html', icon: '🔗'},
+                     { id: 'math-practice_0002', title: '数学乐园之骰子', url: 'https://always001.github.io/math-practice_0002.html', icon: '🎲'},
+                     { id: 'talent', title: '天才基本法', url: 'https://always001.github.io/github.io/talent.html',icon: '🎓'}]}[cat] || [];
   }
 
   async openArticle(cat, id) {
@@ -753,6 +903,49 @@ try {
   // 最后的兜底：手动调用一次
   try { window.app.renderHome(); } catch (e2) {}
 }
+
+</script>
+
+<!-- ✨ 访问记录追踪器 - 100% 独立工作 -->
+<script src="js/visit-tracker.js"></script>
+
+<script>
+window.addEventListener("DOMContentLoaded", async () => {
+  const container = document.getElementById("games");
+  if (!container) return;
+
+  let games = [];
+  try {
+    const r = await fetch("content/games/index.json?_=" + Date.now());
+    const text = await r.text();
+
+    try {
+      games = JSON.parse(text);
+    } catch {
+      console.warn("返回的不是 JSON，使用默认数据");
+      games = [{ id: "pinyin-match", title: "拼音消消乐", icon: "🧩" }];
+    }
+  } catch (e) {
+    console.error("fetch 出错：", e);
+    games = [{ id: "pinyin-match", title: "拼音消消乐", icon: "🧩" }];
+  }
+
+  games.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "game-item";
+    div.style.cursor = "pointer";
+    div.style.padding = "10px";
+    div.style.fontSize = "20px";
+    div.style.textAlign = "center";
+
+    div.onclick = () => {
+      window.location.href = `content/games/${item.id}.html`;
+    };
+
+    div.innerText = `${item.icon} ${item.title}`;
+    container.appendChild(div);
+  });
+});
 </script>
 <!-- ✨ 访问记录追踪器 - 100% 独立工作 -->
 <script src="js/visit-tracker.js"></script>
