@@ -717,6 +717,14 @@ class HuaXiaApp {
             //⭐ 如果是 games → 跳游戏 HTML
             window.location.href = `content/games/${a.id}.html`;
           };
+
+        } else if (cat.id === 'heroes') {
+            // ⭐⭐ 关键：历史人物跳 JSON viewer ⭐⭐
+            card.onclick = () => {
+              window.location.href = `/content/heroes/viewer.html?file=/content/heroes/${a.id}.json`;
+            };
+        
+        
         } else {
           // ⭐ 默认跳文章
           card.onclick = () => this.openArticle(cat.id, a.id);
@@ -733,6 +741,18 @@ class HuaXiaApp {
       if (r.ok) return await r.json();
     } catch (e) {}
     return { festivals: [{ id: 'duanwu', title: '端午节', icon: '🐉' }],
+             heroes: [{ id: 'confucius', title: '孔子', icon: '🧙‍♂️' },
+                      { id: 'qinshihuang', title: '秦始皇', icon: '👑' },
+                      { id: 'yanzhenqing', title: '颜真卿', icon: '🖋️' },
+                      { id: 'mengzi', title: '孟子', icon: '🧘‍♂️' },
+                      { id: 'zhuangzi', title: '庄子', icon: '🦋' },
+                      { id: 'laozi', title: '老子', icon: '🐂' },
+                      { id: 'quyuan‌', title: '屈原', icon: '📜' },
+                      { id: 'zhangqian', title: '张骞', icon: '🧭' },
+                      { id: 'libai', title: '李白', icon: '🍶' },
+                      { id: 'dufu', title: '杜甫', icon: '📖' },
+                      { id: 'simaqian', title: '司马迁', icon: '📚' },
+                      { id: 'ts', title: '秦始皇待追加', icon: '👑' }],
              games: [{ id: 'pinyin-match', title: '拼音消消乐', icon: '🧩' },
                      { id: 'tianzige-trace', title: '田字格描红', icon: '✏️' },
                      { id: 'idiom-chain', title: '成语接龙', icon: '🔗' }],
