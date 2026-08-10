@@ -1,0 +1,98 @@
+[
+  {
+    "id": "confucius",
+    "title": "孔子",
+    "desc": "儒家创始人，思想影响深远。",
+    "icon": "🧙‍♂️",
+    "cover": "covers/history_confucius.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/confucius.json"
+  },
+  {
+    "id": "qinshihuang",
+    "title": "秦始皇",
+    "desc": "中国第一位皇帝，完成大一统。",
+    "icon": "👑",
+    "cover": "covers/history_qinshihuang.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/qinshihuang.json"
+  },
+  {
+    "id": "yanzhenqing",
+    "title": "颜真卿",
+    "desc": "唐代书法家，楷书代表人物。",
+    "icon": "🖋️",
+    "cover": "covers/history_yanzhenqing.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/yanzhenqing.json"
+  },
+  {
+    "id": "mengzi",
+    "title": "孟子",
+    "desc": "儒家重要代表人物，继承并发展孔子思想。",
+    "icon": "🧘‍♂️",
+    "cover": "covers/history_mengzi.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/mengzi.json"
+  },
+  {
+    "id": "zhuangzi",
+    "title": "庄子",
+    "desc": "道家代表人物，主张逍遥自在。",
+    "icon": "🦋",
+    "cover": "covers/history_zhuangzi.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/zhuangzi.json"
+  },
+  {
+    "id": "laozi",
+    "title": "老子",
+    "desc": "道家创始人，《道德经》作者。",
+    "icon": "🐂",
+    "cover": "covers/history_laozi.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/laozi.json"
+  },
+  {
+    "id": "quyuan",
+    "title": "屈原",
+    "desc": "伟大诗人，《离骚》作者。",
+    "icon": "📜",
+    "cover": "covers/history_quyuan.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/quyuan.json"
+  },
+  {
+    "id": "zhangqian",
+    "title": "张骞",
+    "desc": "汉代外交家，开辟丝绸之路。",
+    "icon": "🧭",
+    "cover": "covers/history_zhangqian.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/zhangqian.json"
+  },
+  {
+    "id": "libai",
+    "title": "李白",
+    "desc": "浪漫主义诗人，被称为“诗仙”。",
+    "icon": "🍶",
+    "cover": "covers/history_libai.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/libai.json"
+  },
+  {
+    "id": "dufu",
+    "title": "杜甫",
+    "desc": "现实主义诗人，被称为“诗圣”。",
+    "icon": "📖",
+    "cover": "covers/history_dufu.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/dufu.json"
+  },
+  {
+    "id": "simaqian",
+    "title": "司马迁",
+    "desc": "史学家，《史记》作者。",
+    "icon": "📚",
+    "cover": "covers/history_simaqian.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/simaqian.json"
+  }，
+  {
+    "id": "ts",
+    "title": "秦始皇待追加",
+    "desc": "中国第一位皇帝，完成大一统。",
+    "icon": "👑",
+    "cover": "covers/history_qinshihuang.jpg",
+    "page": "content/heroes/viewer.html?file=content/heroes/qinshihuang.json"
+  },
+]

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>历史人物</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div id="content"></div>
+
+<script>
+  async function load() {
+    const params = new URLSearchParams(location.search);
+    const file = params.get("file");
+    const res = await fetch(file);
+    const data = await res.json();
+
+    const container = document.getElementById("content");
+
+    container.innerHTML = `
+      <h1>${data.title}</h1>
+      <h2>${data.subtitle}</h2>
+      <img src="${data.cover}" class="cover">
+    `;
+
+    // ⭐ 外网链接支持
+    if (data.external) {
+      const link = document.createElement("p");
+      link.innerHTML = `<a href="${data.external.url}" target="_blank" style="color:#007bff;">
+        🔗 ${data.external.label}
+      </a>`;
+      container.appendChild(link);
+    }
+
+    data.sections.forEach(sec => {
+      const block = document.createElement("div");
+      block.innerHTML = `
+        <h3>${sec.title}</h3>
+        ${sec.content.map(p => `<p>${p}</p>`).join("")}
+      `;
+      container.appendChild(block);
+    });
+  }
+
+  load();
+</script>
+
+</body>
+</html>

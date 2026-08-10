@@ -1,0 +1,45 @@
+{
+  "id": "yanzhenqing",
+  "title": "颜真卿",
+  "subtitle": "唐代书法家",
+  "cover": "../../covers/history_yanzhenqing.jpg",
+
+  "external": {
+    "label": "英文介绍（Comuseum）",
+    "url": "https://www.comuseum.com/calligraphy/masters/yan-zhenqing/"
+  },
+
+  "sections": [
+    {
+      "title": "人物简介",
+      "content": [
+        "颜真卿（709—785），唐代著名书法家、政治家。",
+        "其书法雄浑有力，被誉为“颜体”，是楷书的重要代表。"
+      ]
+    },
+    {
+      "title": "主要贡献",
+      "content": [
+        "创立“颜体”楷书，影响后世书法发展。",
+        "代表作《多宝塔碑》《祭侄文稿》被视为书法经典。",
+        "忠义刚直，在安史之乱中坚守正义。"
+      ]
+    },
+    {
+      "title": "艺术特点",
+      "content": [
+        "笔力雄健，结构严谨。",
+        "气势开张，风格庄重。",
+        "被誉为“天下第二行书”。"
+      ]
+    },
+    {
+      "title": "代表作品",
+      "content": [
+        "《祭侄文稿》",
+        "《多宝塔碑》",
+        "《颜勤礼碑》"
+      ]
+    }
+  ]
+}
