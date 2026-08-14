@@ -28,6 +28,13 @@
     "desc": "数学乐园之骰子"
   },
   {
+    "id": "math-practice_0003",
+    "title": "方格填数闯关",
+    "icon": "🧩",
+    "url": "https://maths3.github.io/math-practice_0003.html",
+    "desc": "方格填数闯关"
+  },
+  {
     "id": "talent",
     "title": "天才基本法",
     "icon": "🎈 ",
