@@ -489,7 +489,7 @@ async function generateCover(title) {
 
   // 你的 GitHub Pages 图片地址
   //const url = `https://huaxia-tech.github.io/covers/${encodeURIComponent(title)}.jpg`;
-  const url = `https://huaxia-tech.github.io/huaxia-classroom/covers/${encodeURIComponent(title)}.jpg`;
+  const url = `https://always001.github.io/huaxia-classroom/covers/${encodeURIComponent(title)}.jpg`;
 
   localStorage.setItem(key, url);
   return url;
